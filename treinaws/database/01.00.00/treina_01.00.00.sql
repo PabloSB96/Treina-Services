@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     `surname` varchar(500) NOT NULL,
     `istrainer` BOOLEAN NOT NULL default 0, 
     `password` varchar(200) NOT NULL,
+    `trainercode` varchar(100),
     PRIMARY KEY (`id`),
     UNIQUE (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;

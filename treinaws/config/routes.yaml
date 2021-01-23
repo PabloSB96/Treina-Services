@@ -1,15 +1,7 @@
-user_test:
-    path: /user/test
-    controller: App\Controller\UserController::test
+api_test:
+    path: /api/test
+    controller: App\Controller\GeneralController::test
 
-user_login:
-    path: /user/login
-    controller: App\Controller\UserController::login
-
-user_get:
-    path: /user/get
-    controller: App\Controller\UserController::getUsers
-
-user_create:
-    path: /user/create
-    controller: App\Controller\UserController::createUser
+api_login:
+    path: /api/login
+    controller: App\Controller\GeneralController::login
