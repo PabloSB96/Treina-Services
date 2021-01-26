@@ -5,3 +5,11 @@ api_test:
 api_login:
     path: /api/login
     controller: App\Controller\GeneralController::login
+
+api_trainer_clients:
+    path: /api/trainer/clients
+    controller: App\Controller\TrainerController::clients
+
+api_trainer_exercices:
+    path: /api/trainer/exercices
+    controller: App\Controller\TrainerController::myExercices
