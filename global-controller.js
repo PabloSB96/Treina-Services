@@ -36,6 +36,10 @@ const User = sequelize.define('User', {
     isTrainer: {type: DataTypes.BOOLEAN, allowNull: false, field: 'is_trainer'},
     trainerCode: {type: DataTypes.STRING, allowNull: true, field: 'trainer_code'},
     name: {type: DataTypes.STRING, allowNull: false},
+    goal: {type: DataTypes.STRING, allowNull: false, field: 'current_goal'},
+    goalFull: {type: DataTypes.STRING, allowNull: false, field: 'current_goal_full'},
+    height: {type: DataTypes.BIGINT, primaryKey: true, field: 'current_height_cm'},
+    weight: {type: DataTypes.BIGINT, primaryKey: true, field: 'current_weight_kg'},
     token: {type: DataTypes.STRING, allowNull: false},
     deviceId: {type: DataTypes.STRING, allowNull: false, field: 'device_id'},
     createdAt: {type: DataTypes.DATE, allowNull: true, field: 'created_at'}
@@ -67,16 +71,23 @@ app.post('/register', async (req, res) => {
         res.status(400).send('El usuario ya existe');
     } else {
         console.log("register - 2");
-        if (registerBody.password != undefined && registerBody.password.trim() != '' &&
+        if ((registerBody.password != undefined && registerBody.password.trim() != '' &&
             registerBody.email != undefined && registerBody.email.trim() != '' && 
             registerBody.repeatPassword != undefined && registerBody.repeatPassword.trim() != '' &&
             registerBody.password.trim() == registerBody.repeatPassword.trim() && 
-            registerBody.sex != undefined && registerBody.sex.trim() != '' && 
-            registerBody.birthDate != undefined &&
-            registerBody.isTrainer != undefined &&
             registerBody.name != undefined && registerBody.name.trim() != '' && 
-            registerBody.deviceId != undefined && registerBody.deviceId.trim() != ''
-            ) {
+            registerBody.isTrainer != undefined && 
+            registerBody.deviceId != undefined && registerBody.deviceId.trim() != '' ) && (
+                (
+                    !registerBody.isTrainer && 
+                    registerBody.height != undefined &&
+                    registerBody.weight != undefined && 
+                    registerBody.goal != undefined && registerBody.goal.trim() != '' && 
+                    registerBody.goalFull != undefined && registerBody.goalFull.trim() != '' &&
+                    registerBody.sex != undefined && registerBody.sex.trim() != '' && 
+                    registerBody.birthDate != undefined
+                ) || registerBody.isTrainer
+            )) {
 
                 encryptedPassword = await bcrypt.hash(registerBody.password, 10);
 
@@ -104,6 +115,10 @@ app.post('/register', async (req, res) => {
                     name: registerBody.name,
                     token: token,
                     deviceId: registerBody.deviceId,
+                    goal: registerBody.goal,
+                    goalFull: registerBody.goalFull,
+                    height: registerBody.height,
+                    weight: registerBody.weight
                 });
 
                 // Return login token
@@ -128,8 +143,6 @@ app.post('/login', async (req, res) => {
             result.email = email;
             result.token = await updateToken(searchUser.token);
             result.name = searchUser.name;
-            result.sex = searchUser.sex;
-            result.age = searchUser.age;
             res.status(200).json(result);
         } else {
             let message  = 'PASSWORD_INCORRECT';

@@ -31,23 +31,10 @@ CREATE TABLE IF NOT EXISTS treina_user (
     trainer_code BOOLEAN,
     current_height_cm BIGINT,
     current_weight_kg BIGINT,
+    current_goal VARCHAR(500),
+    current_goal_full VARCHAR(2000),
     device_id VARCHAR(500),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-CREATE TABLE IF NOT EXISTS treina_user_measures_history (
-	id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    height_cm BIGINT NOT NULL,
-    weight_kg BIGINT NOT NULL,
-    chest_cm BIGINT NOT NULL,
-    arm_cm BIGINT NOT NULL,
-    waist_cm BIGINT NOT NULL,
-    hip_cm BIGINT NOT NULL,
-    gluteus_cm BIGINT NOT NULL,
-    thigh_cm BIGINT NOT NULL,
-    trainee_id BIGINT NOT NULL,
-    updated_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (trainee_id) REFERENCES treina_user(id)
 );
 CREATE TABLE IF NOT EXISTS treina_user_measures_history (
 	id BIGINT AUTO_INCREMENT PRIMARY KEY,
