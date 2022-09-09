@@ -212,8 +212,6 @@ let sendEmail = async (to, subject, text) => {
     transporter.sendMail(mailOptions, function(error, info){
         if (error) {
           console.log(error);
-        } else {
-          console.log('Email sent: ' + info.response);
         }
     });
       
@@ -492,24 +490,14 @@ app.post('/trainer/trainees/delete', async (req, res) => {
 app.post('/trainer/trainees/:traineeId/profile', async (req, res) => {
     let userToken = req.headers.token;
     let traineeId = req.params.traineeId;
-    console.log("\n\n\ntrainees/traineeId/profile - 1");
     const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
     const email = tokenDecoded.email;
-    console.log("trainees/traineeId/profile - 2");
     const searchUser = await User.findOne({where: {email: email }});
-    console.log("trainees/traineeId/profile - 3");
-    console.log(searchUser);
-    console.log("trainees/traineeId/profile - 4");
     if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        console.log("trainees/traineeId/profile - 5");
         res.status(400).send('TOKEN_NOT_VALID');
         return;
     } else {
-        console.log("trainees/traineeId/profile - 6");
         let trainee = await User.findOne({where: {id: traineeId}, attributes: {exclude: ['password', 'recoverPasswordCode', 'recoverPasswordCodeDate', 'active']}});
-        console.log("trainees/traineeId/profile - 7");
-        console.log(trainee);
-        console.log("trainees/traineeId/profile - 8");
         res.status(200).json(trainee);
         return;
     }
@@ -525,9 +513,6 @@ app.post('/trainer/trainees/:traineeId/history', async (req, res) => {
         return;
     } else {
         let historicalData = await UserMeasuresHistory.findAll({where: {trainee: traineeId}, order: [['createdAt', 'DESC']]});
-        console.log("\n\n\ntrainees - history - 1");
-        console.log(historicalData);
-        console.log("trainees - history - 2\n\n\n");
         res.status(200).json(historicalData);
         return;
     }
@@ -543,9 +528,6 @@ app.post('/trainer/trainees/:traineeId/food', async (req, res) => {
         return;
     } else {
         let food = await TraineeFood.findAll({where: {trainee: traineeId}, include: [FoodType, ShoppingElementTraineeFood]});
-        console.log("trainees - food - 1");
-        console.log(food);
-        console.log("trainees - food - 2");
         res.status(200).json(food);
         return;
     }
@@ -633,10 +615,6 @@ app.post('/trainer/trainees/:traineeId/food/edit', async (req, res) => {
     const searchUser = await User.findOne({where: {email: email }});
 
     const reqBody = req.body;
-
-    console.log("\n\n\nTrainees - food - edit - 1");
-    console.log(reqBody);
-    console.log("Trainees - food - edit - 1\n\n\n");
 
     if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
         res.status(400).send('TOKEN_NOT_VALID');
@@ -778,12 +756,6 @@ app.post('/trainer/trainees/:traineeId/exercices/new', async (req, res) => {
 
     const reqBody = req.body;
 
-    console.log("trainer - trainees - exercices - new - 1");
-    console.log(reqBody);
-    console.log("trainer - trainees - exercices - new - 2");
-    console.log(traineeId);
-    console.log("trainer - trainees - exercices - new - 3");
-
     if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
         res.status(400).send('TOKEN_NOT_VALID');
         return;
@@ -842,10 +814,6 @@ app.post('/trainer/trainees/:traineeId/exercices/edit', async (req, res) => {
     const searchUser = await User.findOne({where: {email: email }});
 
     const reqBody = req.body;
-
-    console.log("trainer - trainees - exercices - edit - 1");
-    console.log(reqBody);
-    console.log("trainer - trainees - exercices - edit - 2");
 
     if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
         res.status(400).send('TOKEN_NOT_VALID');
@@ -943,9 +911,6 @@ app.post('/trainer/data/food', async (req, res) => {
         return;
     } else {
         let food = await TrainerFood.findAll({where: {trainer: searchUser.id}, include: [FoodType, ShoppingElementTrainerFood]});
-        console.log("data - food - 1");
-        console.log(food);
-        console.log("data - food - 2");
         res.status(200).json(food);
         return;
     }
@@ -1038,10 +1003,6 @@ app.post('/trainer/data/food/edit', async (req, res) => {
     const searchUser = await User.findOne({where: {email: email }});
 
     const reqBody = req.body;
-
-    console.log("\n\ndata - food - edit - 0.1\n\n");
-    console.log(reqBody);
-    console.log("\n\ndata - food - edit - 0.2\n\n");
 
     if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
         res.status(400).send('TOKEN_NOT_VALID');
@@ -1177,9 +1138,6 @@ app.post('/trainer/data/exercices/new', async (req, res) => {
 });
 app.post('/trainer/data/exercices/edit', async (req, res) => {
     let userToken = req.headers.token;
-    console.log("data - exercices - edit - 1");
-    console.log(userToken);
-    console.log("data - exercices - edit - 2");
     const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
     const email = tokenDecoded.email;
     const searchUser = await User.findOne({where: {email: email }});
@@ -1331,12 +1289,10 @@ app.post('/trainee/food/shoppinglist/:idShoppingListElement', async (req, res) =
                 res.status(200).send(shoppingListElement);
                 return;
             } else {
-                console.log("\n\n\nchecked is null\n\n\n");
                 res.status(400).send('BAD_INFORMATION');
                 return;
             }
         } else {
-            console.log("\n\n\nshoppingListElement is null\n\n\n");
             res.status(400).send('BAD_INFORMATION');
             return;
         }
@@ -1406,13 +1362,7 @@ app.post('/trainee/profile', async (req, res) => {
         if (trainers != undefined && trainers.length == 1) {
             trainer = await User.findOne({where: {id: trainers[0].trainer}, attributes: {exclude: ['password', 'recoverPasswordCode', 'recoverPasswordCodeDate', 'active']}, raw: true});
         }
-        //profile.trainer = trainer;
-        //let profileCopy = JSON.parse(JSON.stringify(profile.getDataValue()));
         profile.trainer = trainer;
-        //profileCopy.trainer = JSON.parse(JSON.stringify(trainer.getDataValue()));
-        console.log("\n\n trainee - profile - 1");
-        console.log(profile);
-        console.log("trainee - profile - 2");
         res.status(200).json(profile);
         return;
     }
@@ -1469,10 +1419,6 @@ app.post('/trainee/profile/updateCode', async (req, res) => {
                 res.status(400).send("TRAINER_CODE_NOT_EXISTS");
                 return;
             }
-            console.log("\n\n\nupdateCode - 1");
-            console.log(searchUser.id);
-            console.log("updateCode - 2");
-            console.log("updateCode - 3\n\n\n");
             await TraineeExercice.destroy({where: {trainee: searchUser.id}});
             await TraineeFood.destroy({where: {trainee: searchUser.id}});
             await Team.destroy({where: {trainee: searchUser.id}});
@@ -1496,7 +1442,7 @@ app.post('/trainee/profile/updateCode', async (req, res) => {
 
 
 app.listen(port, async () => {
-    console.log(`Hello global-controller listening on port ${port}!`);
+    console.log(`Global-controller listening on port ${port}!`);
 
     //sendEmail('pablosanchezbello@gmail.com', 'Prueba', 'Prueba envio email.\nSegunda linea\n<b>Tercera linea</b>');
 
