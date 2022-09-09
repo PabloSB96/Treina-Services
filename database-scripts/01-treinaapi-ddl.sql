@@ -18,6 +18,7 @@ DROP TABLE IF EXISTS treina_user_measures_history;
 DROP TABLE IF EXISTS treina_user_measures;
 DROP TABLE IF EXISTS treina_user;
 DROP TABLE IF EXISTS treina_plan;
+DROP TABLE IF EXISTS treina_config;
 
 
 -- ----------------------------
@@ -30,6 +31,12 @@ CREATE TABLE IF NOT EXISTS treina_plan (
     description VARCHAR(2000) NOT NULL,
     cost_month DOUBLE NOT NULL,
     cost_year DOUBLE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS treina_config (
+	id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    value VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS treina_user (
@@ -48,6 +55,9 @@ CREATE TABLE IF NOT EXISTS treina_user (
     current_goal_full VARCHAR(2000),
     device_id VARCHAR(500),
     plan_id BIGINT,
+    recover_password_code VARCHAR(50),
+    recover_password_code_date TIMESTAMP,
+    active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (plan_id) REFERENCES treina_plan(id)
 );
@@ -186,9 +196,10 @@ CREATE TABLE IF NOT EXISTS treina_shopping_element_trainee_food (
 	id BIGINT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     description VARCHAR(2000) NOT NULL,
+    checked BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     trainee_food_id BIGINT NOT NULL,
-    FOREIGN KEY (trainee_food_id) REFERENCES treina_trainee_food(id)
+    FOREIGN KEY (trainee_food_id) REFERENCES treina_trainee_food(id) ON DELETE CASCADE
 );
 COMMIT;
 
@@ -196,6 +207,8 @@ COMMIT;
 -- ----------------------------
 -- ADDING DATA TO TABLES
 -- ----------------------------
+INSERT INTO treina_config(id, name, value) VALUES (1, 'app.currentVersion', '1.0.0-rc0');
+
 INSERT INTO treina_food_type(id, code, title) VALUES (1, 'desayuno', 'Desayuno');
 INSERT INTO treina_food_type(id, code, title) VALUES (2, 'almuerzo', 'Almuerzo');
 INSERT INTO treina_food_type(id, code, title) VALUES (3, 'comida', 'Comida');

@@ -6,6 +6,8 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+var nodemailer = require('nodemailer');
+
 // Sequelize: general import
 const { Sequelize, DataTypes } = require('sequelize');
 
@@ -27,6 +29,12 @@ const sequelize = new Sequelize('treinaapi', 'root', 'password12345678', {
 });
 
 // Define models
+const Config = sequelize.define('Config', {
+    id: {type: DataTypes.BIGINT, primaryKey: true},
+    name: {type: DataTypes.STRING, unique: true, allowNull: false},
+    value: {type: DataTypes.STRING, allowNull: false},
+    createdAt: {type: DataTypes.DATE, allowNull: true, field: 'created_at'}
+}, {tableName: 'treina_config', timestamps: false});
 const Plan = sequelize.define('Plan', {
     id: {type: DataTypes.BIGINT, primaryKey: true},
     code: {type: DataTypes.STRING, unique: true, allowNull: false},
@@ -36,7 +44,7 @@ const Plan = sequelize.define('Plan', {
     costYear: {type: DataTypes.DOUBLE, allowNull: false, field: 'cost_year'},
 }, {tableName: 'treina_plan', timestamps: false});
 const User = sequelize.define('User', {
-    id: {type: DataTypes.BIGINT, primaryKey: true},
+    id: {type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true},
     email: {type: DataTypes.STRING, unique: true, allowNull: false},
     password: {type: DataTypes.STRING, allowNull: false},
     sex: {type: DataTypes.STRING, allowNull: true},
@@ -51,15 +59,18 @@ const User = sequelize.define('User', {
     token: {type: DataTypes.STRING, allowNull: false},
     deviceId: {type: DataTypes.STRING, allowNull: false, field: 'device_id'},
     plan: {type: Plan, field: 'plan_id'},
+    recoverPasswordCode: {type: DataTypes.STRING, field: 'recover_password_code'},
+    recoverPasswordCodeDate: {type: DataTypes.DATE, field: 'recover_password_code_date'},
+    active: {type: DataTypes.BOOLEAN},
     createdAt: {type: DataTypes.DATE, allowNull: true, field: 'created_at'}
 }, {tableName: 'treina_user', timestamps: false});
 const Team = sequelize.define('Team', {
-    id: {type: DataTypes.BIGINT, primaryKey: true},
+    id: {type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true},
     trainer: {type: User, field: 'trainer_id'},
     trainee: {type: User, field: 'trainee_id'},
 }, {tableName: 'treina_team', timestamps: false});
 const UserMeasuresHistory = sequelize.define('UserMeasuresHistory', {
-    id: {type: DataTypes.BIGINT, primaryKey: true},
+    id: {type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true},
     weightKg: {type: DataTypes.DOUBLE, allowNull: false, field: 'weight_kg'},
     chestCm: {type: DataTypes.DOUBLE, allowNull: false, field: 'chest_cm'},
     armCm: {type: DataTypes.DOUBLE, allowNull: false, field: 'arm_cm'},
@@ -71,7 +82,7 @@ const UserMeasuresHistory = sequelize.define('UserMeasuresHistory', {
     createdAt: {type: DataTypes.DATE, allowNull: true, field: 'created_at'}
 }, {tableName: 'treina_user_measures_history', timestamps: false});
 const TrainerExercice = sequelize.define('TrainerExercice', {
-    id: {type: DataTypes.BIGINT, primaryKey: true},
+    id: {type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true},
     title: {type: DataTypes.STRING, allowNull: false},
     description: {type: DataTypes.STRING, allowNull: false},
     observations: {type: DataTypes.STRING, allowNull: false},
@@ -95,7 +106,7 @@ const FoodType = sequelize.define('FoodType', {
     createdAt: {type: DataTypes.DATE, allowNull: true, field: 'created_at'}
 }, {tableName: 'treina_food_type', timestamps: false});
 const TrainerFood = sequelize.define('TrainerFood', {
-    id: {type: DataTypes.BIGINT, primaryKey: true},
+    id: {type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true},
     title: {type: DataTypes.STRING, allowNull: false},
     description: {type: DataTypes.STRING, allowNull: false},
     amount: {type: DataTypes.STRING, allowNull: false, field: 'default_amount'},
@@ -113,7 +124,7 @@ const TrainerFood = sequelize.define('TrainerFood', {
 FoodType.hasMany(TrainerFood, {sourceKey: 'id', foreignKey: 'foodType'});
 TrainerFood.belongsTo(FoodType, {foreignKey: 'foodType'});
 const TraineeExercice = sequelize.define('TraineeExercice', {
-    id: {type: DataTypes.BIGINT, primaryKey: true},
+    id: {type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true},
     title: {type: DataTypes.STRING, allowNull: false},
     description: {type: DataTypes.STRING, allowNull: false},
     observations: {type: DataTypes.STRING, allowNull: false},
@@ -131,7 +142,7 @@ const TraineeExercice = sequelize.define('TraineeExercice', {
     createdAt: {type: DataTypes.DATE, allowNull: true, field: 'created_at'}
 }, {tableName: 'treina_trainee_exercice', timestamps: false});
 const TraineeFood = sequelize.define('TraineeFood', {
-    id: {type: DataTypes.BIGINT, primaryKey: true},
+    id: {type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true},
     title: {type: DataTypes.STRING, allowNull: false},
     description: {type: DataTypes.STRING, allowNull: false},
     amount: {type: DataTypes.STRING, allowNull: false, field: 'default_amount'},
@@ -149,7 +160,7 @@ const TraineeFood = sequelize.define('TraineeFood', {
 FoodType.hasMany(TraineeFood, {sourceKey: 'id', foreignKey: 'foodType'});
 TraineeFood.belongsTo(FoodType, {foreignKey: 'foodType'});
 const ShoppingElementTrainerFood = sequelize.define('ShoppingElementTrainerFood', {
-    id: {type: DataTypes.BIGINT, primaryKey: true},
+    id: {type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true},
     title: {type: DataTypes.STRING, allowNull: false},
     description: {type: DataTypes.STRING, allowNull: false},
     trainerFood: {type: TrainerFood, field: 'trainer_food_id'},
@@ -157,6 +168,16 @@ const ShoppingElementTrainerFood = sequelize.define('ShoppingElementTrainerFood'
 }, {tableName: 'treina_shopping_element_trainer_food', timestamps: false});
 TrainerFood.hasMany(ShoppingElementTrainerFood, {sourceKey: 'id', foreignKey: 'trainerFood'});
 ShoppingElementTrainerFood.belongsTo(TrainerFood, {foreignKey: 'trainerFood'});
+const ShoppingElementTraineeFood = sequelize.define('ShoppingElementTraineeFood', {
+    id: {type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true},
+    title: {type: DataTypes.STRING, allowNull: false},
+    description: {type: DataTypes.STRING, allowNull: true},
+    checked: {type: DataTypes.BOOLEAN},
+    traineeFood: {type: TraineeFood, field: 'trainee_food_id'},
+    createdAt: {type: DataTypes.DATE, allowNull: true, field: 'created_at'}
+}, {tableName: 'treina_shopping_element_trainee_food', timestamps: false});
+TraineeFood.hasMany(ShoppingElementTraineeFood, {sourceKey: 'id', foreignKey: 'traineeFood'});
+ShoppingElementTraineeFood.belongsTo(TraineeFood, {foreignKey: 'traineeFood'});
 
 let updateToken = async (userToken) => {
     const tokenDecoded = jwt.verify(userToken, process.env.TOKEN_KEY);
@@ -172,16 +193,56 @@ let updateToken = async (userToken) => {
     return token;
 }
 
+let sendEmail = async (to, subject, text) => {
+    var transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: 'treina.ayuda@gmail.com',
+          pass: 'fgqvehxtjjmzsvsz'
+        }
+    });
+      
+    var mailOptions = {
+        from: 'treina.ayuda@gmail.com',
+        to: to,
+        subject: subject,
+        text: text
+    };
+      
+    transporter.sendMail(mailOptions, function(error, info){
+        if (error) {
+          console.log(error);
+        } else {
+          console.log('Email sent: ' + info.response);
+        }
+    });
+      
+}
+
+app.post('/config', async (req, res) => {
+    const reqBody = req.body;
+    if (reqBody.appVersion != undefined && reqBody.appVersion.trim() != '') {
+        let currentVersion = await Config.findOne({where: {name: 'app.currentVersion'}, raw: true});
+        if (currentVersion != undefined && currentVersion.value == reqBody.appVersion) {
+            res.status(200).send("OK");
+            return ;
+        } else {
+            res.status(400).send("INTERNAL_ERROR");
+            return ;
+        }
+    } else {
+        res.status(400).send("BAD_REQUEST");
+        return ;
+    }
+});
+
 app.post('/register', async (req, res) => {
     // Register the new user here
     const registerBody = req.body;
     const searchUser = await User.findOne({where: { email: registerBody.email }});
-    console.log("register - 1");
     if (searchUser != undefined) {
-        console.log("register - 1");
-        res.status(400).send('El usuario ya existe');
+        res.status(400).send({'message': 'BAD_REQUEST'});
     } else {
-        console.log("register - 2");
         if ((registerBody.password != undefined && registerBody.password.trim() != '' &&
             registerBody.email != undefined && registerBody.email.trim() != '' && 
             registerBody.repeatPassword != undefined && registerBody.repeatPassword.trim() != '' &&
@@ -205,12 +266,12 @@ app.post('/register', async (req, res) => {
                     // It is a trainee, first check if trainer exists, then match it with his trainer
                     trainer = await User.findOne({where: { trainerCode: registerBody.trainerCode }});
                     if (trainer == null || trainer == undefined) {
-                        res.status(400).send("TRAINER_CODE_NOT_EXISTS");
-                        return;
+                        res.status(400).send({'message': 'TRAINER_CODE_NOT_EXISTS'});
+                        return ;
                     }
                 }
 
-                encryptedPassword = await bcrypt.hash(registerBody.password, 10);
+                encryptedPassword = await bcrypt.hash(registerBody.password.trim(), 10);
 
                 let email = registerBody.email;
                 const token = jwt.sign(
@@ -220,11 +281,25 @@ app.post('/register', async (req, res) => {
                 );
 
                 var trainerCode = undefined;
+                let active = true;
                 if (registerBody.isTrainer) {
-                    // TODO : Improve this code generation to avoid repetitions
-                    trainerCode = Date.now().toString(36).toUpperCase();
+                    for(let i = 0; i < 100; i++) {
+                        trainerCode = Date.now().toString(36).toUpperCase();
+                        let userCheck = await User.findOne({where: {trainerCode: trainerCode}});
+                        if (userCheck == undefined) {
+                            i = 100;
+                            active = false;
+                        } else {
+                            trainerCode = undefined;
+                        }
+                    }
+                    if (trainerCode == undefined) {
+                        res.status(400).send({'message': 'NOT_ABLE_TO_GENERATE_CODE'});
+                        return ;
+                    }
                 }
 
+                
                 //users.set(user.email, user);
                 let user = await User.create({
                     email: registerBody.email.toLowerCase(),
@@ -239,7 +314,8 @@ app.post('/register', async (req, res) => {
                     goal: registerBody.goal,
                     goalFull: registerBody.goalFull,
                     height: registerBody.height,
-                    weight: registerBody.weight
+                    weight: registerBody.weight,
+                    active: active
                 });
 
                 user = await User.findOne({where: { email: registerBody.email }});
@@ -252,16 +328,26 @@ app.post('/register', async (req, res) => {
                     });
                 }
 
-                // Return login token
-                console.log("register - 4");
+                if (!user.active) {
+                    res.status(400).send({'message': 'USER_NOT_ACTIVE'});
+                    return;
+                }
+
+                if (registerBody.isTrainer) {
+                    sendEmail(
+                        registerBody.email.toLowerCase(), 
+                        'Registro completado', 
+                        'Se ha completado tu registro como entrenador correctamente. Para poder iniciar sesión debemos activar tu cuenta, y para ello debes solicitarnos un plan en nuestra web: www.treina.app con este mismo email. En caso de cualquier duda o problema no dudes en contactarnos en treina.ayuda@gmail.com.');
+                }
+
                 res.status(200).json(user);
+                return;
         } else {
-            console.log("register - 5");
-            res.status(400).send("Información no válida");
+            res.status(400).send({'message': 'BAD_REQUEST'});
+            return;
         }
     }
 });
-
 app.post('/login', async (req, res) => {
     const registerBody = req.body;
     const email = registerBody.email;
@@ -269,29 +355,77 @@ app.post('/login', async (req, res) => {
 
     const searchUser = await User.findOne({ where: {email: email }});
 
-    console.log("\n\n\nlogin - 1");
-    console.log(searchUser);
-    console.log("login - 2");
-    console.log(email);
-    console.log("login - 3");
-    console.log(registerBody.isTrainer);
-    console.log("login - 4");
-    console.log(searchUser.isTrainer);
-    console.log("login - 5\n\n\n");
-
     if (searchUser != undefined && searchUser.isTrainer == registerBody.isTrainer) {
-        if (await bcrypt.compare(password, searchUser.password)) {
-            let result = new Object();
-            result.email = email;
-            result.token = await updateToken(searchUser.token);
-            result.name = searchUser.name;
-            res.status(200).json(result);
+        if (searchUser.active) {
+            if (await bcrypt.compare(password, searchUser.password)) {
+                let result = new Object();
+                result.email = email;
+                result.token = await updateToken(searchUser.token);
+                result.name = searchUser.name;
+                res.status(200).json(result);
+            } else {
+                let message  = 'PASSWORD_INCORRECT';
+                res.status(400).send({'message': message});
+            }
         } else {
-            let message  = 'PASSWORD_INCORRECT';
+            let message  = 'USER_NOT_ACTIVE';
             res.status(400).send({'message': message});
         }
     } else {
         res.status(400).send({'message': 'USER_NOT_EXISTS'});
+    }
+});
+app.post('/forgotpassword/code', async (req, res) => {
+    const reqBody = req.body;
+    if (reqBody.email != undefined && reqBody.email.trim() != '') {
+        let searchUser = await User.findOne({where: {email: reqBody.email}});
+        if (searchUser != undefined) {
+            let newCode = Date.now().toString(36).toUpperCase();
+            searchUser.recoverPasswordCode = newCode;
+            searchUser.recoverPasswordCodeDate = Date.now() + 300000;
+            await searchUser.save();
+
+            sendEmail(reqBody.email, 'Cambio de contraseña', 'Su código para recuperar su contraseña es: ' + newCode.toString() + '\nRecuerda que el código será válido durante 5 minutos.')
+
+            res.status(200).send("OK");
+            return ;
+        } else {
+            res.status(400).send("EMAIL_NOT_EXISTS");
+            return ;
+        }
+    } else {
+        res.status(400).send("BAD_REQUEST");
+        return ;
+    }
+});
+app.post('/forgotpassword/newpassword', async (req, res) => {
+    const reqBody = req.body;
+    if (reqBody.email != undefined && reqBody.email.trim() != '' && 
+        reqBody.code != undefined && reqBody.code.trim() != '' && 
+        reqBody.password != undefined && reqBody.password.trim() != '' && 
+        reqBody.repeatPassword != undefined && reqBody.repeatPassword.trim() != '' && 
+        reqBody.password.trim() == reqBody.repeatPassword.trim()) {
+        let searchUser = await User.findOne({where: {email: reqBody.email}});
+        if (searchUser != undefined) {
+            if (searchUser.recoverPasswordCode == reqBody.code.trim() && Date.now() < searchUser.recoverPasswordCodeDate) {
+                searchUser.recoverPasswordCode = null;
+                searchUser.recoverPasswordCodeDate = null;
+                let encryptedPassword = await bcrypt.hash(reqBody.password.trim(), 10);
+                searchUser.password = encryptedPassword;
+                await searchUser.save();
+                res.status(200).send("OK");
+                return ;
+            } else {
+                res.status(400).send("CODE_NOT_VALID");
+                return ;
+            }
+        } else {
+            res.status(400).send("EMAIL_NOT_EXISTS");
+            return ;
+        }
+    } else {
+        res.status(400).send("BAD_REQUEST");
+        return ;
     }
 });
 
@@ -310,9 +444,9 @@ app.post('/trainer/trainees', async (req, res) => {
             trainees = [];
         }
         for (let i = 0; i < trainees.length; i++) {
-            let t = await User.findOne({where: {id: trainees[i].getDataValue('trainee')}});
+            let t = await User.findOne({where: {id: trainees[i].getDataValue('trainee')}, raw: true});
             if (t != null && t != undefined) {
-                let history = await UserMeasuresHistory.findAll({limit: 1, order: [['createdAt', 'DESC']]});
+                let history = await UserMeasuresHistory.findAll({where: {trainee: t.id}, limit: 1, order: [['createdAt', 'DESC']]});
                 if (history != undefined && history.length == 1) {
                     t.lastMeasuresUpdate = history[0].getDataValue('createdAt');
                 }
@@ -344,7 +478,7 @@ app.post('/trainer/trainees/delete', async (req, res) => {
             } else {
                 await TraineeExercice.destroy({where: {trainee: reqBody.id}});
                 await TraineeFood.destroy({where: {trainee: reqBody.id}});
-                await Team.destroy({where: {trainer: searchUser.id, trainee: reqBody.id}})
+                await Team.destroy({where: {trainer: searchUser.id, trainee: reqBody.id}});
 
                 res.status(200).json("DELETED");
                 return ;
@@ -358,14 +492,24 @@ app.post('/trainer/trainees/delete', async (req, res) => {
 app.post('/trainer/trainees/:traineeId/profile', async (req, res) => {
     let userToken = req.headers.token;
     let traineeId = req.params.traineeId;
+    console.log("\n\n\ntrainees/traineeId/profile - 1");
     const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
     const email = tokenDecoded.email;
+    console.log("trainees/traineeId/profile - 2");
     const searchUser = await User.findOne({where: {email: email }});
+    console.log("trainees/traineeId/profile - 3");
+    console.log(searchUser);
+    console.log("trainees/traineeId/profile - 4");
     if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+        console.log("trainees/traineeId/profile - 5");
         res.status(400).send('TOKEN_NOT_VALID');
         return;
     } else {
-        let trainee = await User.findOne({where: {id: traineeId}, attributes: {exclude: ['password']}});
+        console.log("trainees/traineeId/profile - 6");
+        let trainee = await User.findOne({where: {id: traineeId}, attributes: {exclude: ['password', 'recoverPasswordCode', 'recoverPasswordCodeDate', 'active']}});
+        console.log("trainees/traineeId/profile - 7");
+        console.log(trainee);
+        console.log("trainees/traineeId/profile - 8");
         res.status(200).json(trainee);
         return;
     }
@@ -380,7 +524,7 @@ app.post('/trainer/trainees/:traineeId/history', async (req, res) => {
         res.status(400).send('TOKEN_NOT_VALID');
         return;
     } else {
-        let historicalData = await UserMeasuresHistory.findAll({where: {trainee: traineeId}});
+        let historicalData = await UserMeasuresHistory.findAll({where: {trainee: traineeId}, order: [['createdAt', 'DESC']]});
         console.log("\n\n\ntrainees - history - 1");
         console.log(historicalData);
         console.log("trainees - history - 2\n\n\n");
@@ -398,7 +542,7 @@ app.post('/trainer/trainees/:traineeId/food', async (req, res) => {
         res.status(400).send('TOKEN_NOT_VALID');
         return;
     } else {
-        let food = await TraineeFood.findAll({where: {trainee: traineeId}, include: FoodType});
+        let food = await TraineeFood.findAll({where: {trainee: traineeId}, include: [FoodType, ShoppingElementTraineeFood]});
         console.log("trainees - food - 1");
         console.log(food);
         console.log("trainees - food - 2");
@@ -450,6 +594,25 @@ app.post('/trainer/trainees/:traineeId/food/new', async (req, res) => {
                     trainee: traineeId
                 });
 
+                shopList = [];
+                if (reqBody.shoppingList != undefined && reqBody.shoppingList.length > 0) {
+                    for (let i = 0; i < reqBody.shoppingList.length; i++) {
+                        if (reqBody.shoppingList[i].title != null && reqBody.shoppingList[i].title.trim() != '') {
+                            let description = '';
+                            if (reqBody.shoppingList[i].description != undefined && reqBody.shoppingList[i].description != null) {
+                                description = reqBody.shoppingList[i].description;
+                            } 
+                            const elem = await ShoppingElementTraineeFood.create({
+                                title: reqBody.shoppingList[i].title,
+                                description: description,
+                                traineeFood: food.id
+                            });
+                            shopList.push(elem);
+                        }
+                    }
+                }
+                food.shoppingList = shopList;
+
                 res.status(200).json(food);
                 return;
             } else {
@@ -470,6 +633,10 @@ app.post('/trainer/trainees/:traineeId/food/edit', async (req, res) => {
     const searchUser = await User.findOne({where: {email: email }});
 
     const reqBody = req.body;
+
+    console.log("\n\n\nTrainees - food - edit - 1");
+    console.log(reqBody);
+    console.log("Trainees - food - edit - 1\n\n\n");
 
     if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
         res.status(400).send('TOKEN_NOT_VALID');
@@ -508,7 +675,34 @@ app.post('/trainer/trainees/:traineeId/food/edit', async (req, res) => {
                     food.onSaturday = reqBody.onSaturday;
                     food.onSunday = reqBody.onSunday;
 
-                    await food.save();
+                    food = await food.save();
+
+                    shopList = [];
+                    if (reqBody.shoppingList != undefined && reqBody.shoppingList.length > 0) {
+                        for (let i = 0; i < reqBody.shoppingList.length; i++) {
+                            if (reqBody.shoppingList[i].new != undefined && reqBody.shoppingList[i].new) {
+                                const elem = await ShoppingElementTraineeFood.create({
+                                    title: reqBody.shoppingList[i].title,
+                                    description: reqBody.shoppingList[i].description,
+                                    traineeFood: food.id
+                                });
+                                shopList.push(elem);
+                            } else {
+                                let elem = await ShoppingElementTraineeFood.findOne({where: {id: reqBody.shoppingList[i].id}});
+                                if (elem != undefined) {
+                                    if (reqBody.shoppingList[i].delete) {
+                                        await elem.destroy();
+                                    } else {
+                                        elem.title = reqBody.shoppingList[i].title;
+                                        elem.description = reqBody.shoppingList[i].description;
+                                        await elem.save();
+                                        shopList.push(elem);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    food.shoppingList = shopList;
 
                     res.status(200).json(food);
                     return;
@@ -748,7 +942,7 @@ app.post('/trainer/data/food', async (req, res) => {
         res.status(400).send('TOKEN_NOT_VALID');
         return;
     } else {
-        let food = await TrainerFood.findAll({where: {trainer: searchUser.id}, include: FoodType});
+        let food = await TrainerFood.findAll({where: {trainer: searchUser.id}, include: [FoodType, ShoppingElementTrainerFood]});
         console.log("data - food - 1");
         console.log(food);
         console.log("data - food - 2");
@@ -812,10 +1006,6 @@ app.post('/trainer/data/food/new', async (req, res) => {
                     trainer: searchUser.id
                 });
 
-                console.log("\n\n\n food - 1");
-                console.log(food);
-                console.log("food - 2\n\n\n");
-
                 shopList = [];
                 if (reqBody.shoppingList != undefined && reqBody.shoppingList.length > 0) {
                     for (let i = 0; i < reqBody.shoppingList.length; i++) {
@@ -827,7 +1017,7 @@ app.post('/trainer/data/food/new', async (req, res) => {
                         shopList.push(elem);
                     }
                 }
-                //food.shoppingList = shopList;
+                food.shoppingList = shopList;
 
                 res.status(200).json(food);
                 return;
@@ -894,23 +1084,25 @@ app.post('/trainer/data/food/edit', async (req, res) => {
                     shopList = [];
                     if (reqBody.shoppingList != undefined && reqBody.shoppingList.length > 0) {
                         for (let i = 0; i < reqBody.shoppingList.length; i++) {
-                            let elem = await ShoppingElementTrainerFood.findOne({where: {id: reqBody.shoppingList[i].id}});
-                            if (elem != undefined) {
-                                if (reqBody.shoppingList[i].delete) {
-                                    await elem.destroy();
-                                } else {
-                                    elem.title = reqBody.shoppingList[i].title;
-                                    elem.description = reqBody.shoppingList[i].description;
-                                    await elem.save();
-                                    shopList.push(elem);
-                                }
-                            } else {
+                            if (reqBody.shoppingList[i].new != undefined && reqBody.shoppingList[i].new) {
                                 const elem = await ShoppingElementTrainerFood.create({
                                     title: reqBody.shoppingList[i].title,
                                     description: reqBody.shoppingList[i].description,
                                     trainerFood: food.id
                                 });
                                 shopList.push(elem);
+                            } else {
+                                let elem = await ShoppingElementTrainerFood.findOne({where: {id: reqBody.shoppingList[i].id}});
+                                if (elem != undefined) {
+                                    if (reqBody.shoppingList[i].delete) {
+                                        await elem.destroy();
+                                    } else {
+                                        elem.title = reqBody.shoppingList[i].title;
+                                        elem.description = reqBody.shoppingList[i].description;
+                                        await elem.save();
+                                        shopList.push(elem);
+                                    }
+                                }
                             }
                         }
                     }
@@ -1097,9 +1289,57 @@ app.post('/trainee/food', async (req, res) => {
         res.status(400).send('TOKEN_NOT_VALID');
         return;
     } else {
-        let food = await TraineeFood.findAll({where: {trainee: searchUser.id}});
+        let food = await TraineeFood.findAll({where: {trainee: searchUser.id}, include: [FoodType, ShoppingElementTraineeFood]});
         res.status(200).json(food);
         return;
+    }
+});
+app.post('/trainee/food/shoppinglist', async (req, res) => {
+    let userToken = req.headers.token;
+    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+    const email = tokenDecoded.email;
+    const searchUser = await User.findOne({where: {email: email }});
+    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+        res.status(400).send('TOKEN_NOT_VALID');
+        return;
+    } else {
+        let food = await TraineeFood.findAll({where: {trainee: searchUser.id}, include: [ShoppingElementTraineeFood]});
+        let result = [];
+        for (let i = 0; i < food.length; i++) {
+            result = result.concat(food[i].ShoppingElementTraineeFoods);
+        }
+        res.status(200).json(result);
+        return;
+    }
+});
+app.post('/trainee/food/shoppinglist/:idShoppingListElement', async (req, res) => {
+    let userToken = req.headers.token;
+    let idShoppingListElement = req.params.idShoppingListElement;
+    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+    const email = tokenDecoded.email;
+    const reqBody = req.body;
+    const searchUser = await User.findOne({where: {email: email }});
+    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+        res.status(400).send('TOKEN_NOT_VALID');
+        return;
+    } else {
+        let shoppingListElement = await ShoppingElementTraineeFood.findOne({where: {id: idShoppingListElement}});
+        if (shoppingListElement != undefined) {
+            if (reqBody.checked != undefined) {
+                shoppingListElement.checked = reqBody.checked;
+                shoppingListElement = await shoppingListElement.save();
+                res.status(200).send(shoppingListElement);
+                return;
+            } else {
+                console.log("\n\n\nchecked is null\n\n\n");
+                res.status(400).send('BAD_INFORMATION');
+                return;
+            }
+        } else {
+            console.log("\n\n\nshoppingListElement is null\n\n\n");
+            res.status(400).send('BAD_INFORMATION');
+            return;
+        }
     }
 });
 app.post('/trainee/history', async (req, res) => {
@@ -1160,7 +1400,16 @@ app.post('/trainee/profile', async (req, res) => {
         res.status(400).send('TOKEN_NOT_VALID');
         return;
     } else {
-        let profile = await User.findOne({where: {id: searchUser.id}, attributes: {exclude: ['password']}});
+        let profile = await User.findOne({where: {id: searchUser.id}, attributes: {exclude: ['password', 'recoverPasswordCode', 'recoverPasswordCodeDate', 'active']}, raw: true});
+        let trainers = await Team.findAll({where: {trainee: searchUser.id}});
+        let trainer = undefined;
+        if (trainers != undefined && trainers.length == 1) {
+            trainer = await User.findOne({where: {id: trainers[0].trainer}, attributes: {exclude: ['password', 'recoverPasswordCode', 'recoverPasswordCodeDate', 'active']}, raw: true});
+        }
+        //profile.trainer = trainer;
+        //let profileCopy = JSON.parse(JSON.stringify(profile.getDataValue()));
+        profile.trainer = trainer;
+        //profileCopy.trainer = JSON.parse(JSON.stringify(trainer.getDataValue()));
         console.log("\n\n trainee - profile - 1");
         console.log(profile);
         console.log("trainee - profile - 2");
@@ -1185,7 +1434,7 @@ app.post('/trainee/profile/edit', async (req, res) => {
             reqBody.height != undefined && 
             reqBody.weight != undefined
         ) {
-            let profile = await User.findOne({where: {id: searchUser.id}, attributes: {exclude: ['password']}});
+            let profile = await User.findOne({where: {id: searchUser.id}, attributes: {exclude: ['password', 'recoverPasswordCode', 'recoverPasswordCodeDate', 'active']}});
             profile.name = reqBody.name;
             profile.sex = reqBody.sex;
             profile.goal = reqBody.goal;
@@ -1203,10 +1452,53 @@ app.post('/trainee/profile/edit', async (req, res) => {
         }
     }
 });
+app.post('/trainee/profile/updateCode', async (req, res) => {
+    let userToken = req.headers.token;
+    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+    const email = tokenDecoded.email;
+    const searchUser = await User.findOne({where: {email: email }});
+    const reqBody = req.body;
+    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+        res.status(400).send('TOKEN_NOT_VALID');
+        return;
+    } else {
+        if (reqBody.code != undefined && reqBody.code.trim() != '') {
+
+            let newTrainer = await User.findOne({where: { trainerCode: reqBody.code }});
+            if (newTrainer == undefined) {
+                res.status(400).send("TRAINER_CODE_NOT_EXISTS");
+                return;
+            }
+            console.log("\n\n\nupdateCode - 1");
+            console.log(searchUser.id);
+            console.log("updateCode - 2");
+            console.log("updateCode - 3\n\n\n");
+            await TraineeExercice.destroy({where: {trainee: searchUser.id}});
+            await TraineeFood.destroy({where: {trainee: searchUser.id}});
+            await Team.destroy({where: {trainee: searchUser.id}});
+
+            if (newTrainer != undefined) {
+                // It is a trainee so match it with his trainer
+                await Team.create({
+                    trainer: newTrainer.id,
+                    trainee: searchUser.id
+                });
+            }
+
+            res.status(200).json("DELETED");
+            return;
+        } else {
+            res.status(400).json("BAD_REQUEST");
+            return ;
+        }
+    }
+});
 
 
 app.listen(port, async () => {
     console.log(`Hello global-controller listening on port ${port}!`);
+
+    //sendEmail('pablosanchezbello@gmail.com', 'Prueba', 'Prueba envio email.\nSegunda linea\n<b>Tercera linea</b>');
 
     try {
         await sequelize.authenticate();
