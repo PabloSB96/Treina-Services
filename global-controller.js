@@ -218,465 +218,429 @@ let sendEmail = async (to, subject, text) => {
 }
 
 app.post('/config', async (req, res) => {
-    const reqBody = req.body;
-    if (reqBody.appVersion != undefined && reqBody.appVersion.trim() != '') {
-        let currentVersion = await Config.findOne({where: {name: 'app.currentVersion'}, raw: true});
-        if (currentVersion != undefined && currentVersion.value == reqBody.appVersion) {
-            res.status(200).send("OK");
-            return ;
+    try {
+        const reqBody = req.body;
+        if (reqBody.appVersion != undefined && reqBody.appVersion.trim() != '') {
+            let currentVersion = await Config.findOne({where: {name: 'app.currentVersion'}, raw: true});
+            if (currentVersion != undefined && currentVersion.value == reqBody.appVersion) {
+                res.status(200).send("OK");
+                return ;
+            } else {
+                res.status(400).send("INTERNAL_ERROR");
+                return ;
+            }
         } else {
-            res.status(400).send("INTERNAL_ERROR");
+            res.status(400).send("BAD_REQUEST");
             return ;
         }
-    } else {
-        res.status(400).send("BAD_REQUEST");
+    } catch (error) {
+        res.status(400).send("INTERNAL_ERROR");
         return ;
     }
 });
 
 app.post('/register', async (req, res) => {
-    // Register the new user here
-    const registerBody = req.body;
-    const searchUser = await User.findOne({where: { email: registerBody.email }});
-    if (searchUser != undefined) {
-        res.status(400).send({'message': 'BAD_REQUEST'});
-    } else {
-        if ((registerBody.password != undefined && registerBody.password.trim() != '' &&
-            registerBody.email != undefined && registerBody.email.trim() != '' && 
-            registerBody.repeatPassword != undefined && registerBody.repeatPassword.trim() != '' &&
-            registerBody.password.trim() == registerBody.repeatPassword.trim() && 
-            registerBody.name != undefined && registerBody.name.trim() != '' && 
-            registerBody.isTrainer != undefined && 
-            registerBody.deviceId != undefined && registerBody.deviceId.trim() != '' ) && (
-                (
-                    !registerBody.isTrainer && 
-                    registerBody.height != undefined &&
-                    registerBody.weight != undefined && 
-                    registerBody.goal != undefined && registerBody.goal.trim() != '' && 
-                    registerBody.goalFull != undefined && registerBody.goalFull.trim() != '' &&
-                    registerBody.sex != undefined && registerBody.sex.trim() != '' && 
-                    registerBody.birthDate != undefined
-                ) || registerBody.isTrainer
-            )) {
+    try {
+        // Register the new user here
+        const registerBody = req.body;
+        const searchUser = await User.findOne({where: { email: registerBody.email }});
+        if (searchUser != undefined) {
+            res.status(400).send({'message': 'BAD_REQUEST'});
+        } else {
+            if ((registerBody.password != undefined && registerBody.password.trim() != '' &&
+                registerBody.email != undefined && registerBody.email.trim() != '' && 
+                registerBody.repeatPassword != undefined && registerBody.repeatPassword.trim() != '' &&
+                registerBody.password.trim() == registerBody.repeatPassword.trim() && 
+                registerBody.name != undefined && registerBody.name.trim() != '' && 
+                registerBody.isTrainer != undefined && 
+                registerBody.deviceId != undefined && registerBody.deviceId.trim() != '' ) && (
+                    (
+                        !registerBody.isTrainer && 
+                        registerBody.height != undefined &&
+                        registerBody.weight != undefined && 
+                        registerBody.goal != undefined && registerBody.goal.trim() != '' && 
+                        registerBody.goalFull != undefined && registerBody.goalFull.trim() != '' &&
+                        registerBody.sex != undefined && registerBody.sex.trim() != '' && 
+                        registerBody.birthDate != undefined
+                    ) || registerBody.isTrainer
+                )) {
 
-                let trainer = undefined;
-                if (!registerBody.isTrainer && registerBody.trainerCode != undefined) {
-                    // It is a trainee, first check if trainer exists, then match it with his trainer
-                    trainer = await User.findOne({where: { trainerCode: registerBody.trainerCode }});
-                    if (trainer == null || trainer == undefined) {
-                        res.status(400).send({'message': 'TRAINER_CODE_NOT_EXISTS'});
-                        return ;
-                    }
-                }
-
-                encryptedPassword = await bcrypt.hash(registerBody.password.trim(), 10);
-
-                let email = registerBody.email;
-                const token = jwt.sign(
-                    {email, isTrainer: registerBody.isTrainer},
-                    process.env.TOKEN_KEY,
-                    {expiresIn: '72h' }
-                );
-
-                var trainerCode = undefined;
-                let active = true;
-                if (registerBody.isTrainer) {
-                    for(let i = 0; i < 100; i++) {
-                        trainerCode = Date.now().toString(36).toUpperCase();
-                        let userCheck = await User.findOne({where: {trainerCode: trainerCode}});
-                        if (userCheck == undefined) {
-                            i = 100;
-                            active = false;
-                        } else {
-                            trainerCode = undefined;
+                    let trainer = undefined;
+                    if (!registerBody.isTrainer && registerBody.trainerCode != undefined) {
+                        // It is a trainee, first check if trainer exists, then match it with his trainer
+                        trainer = await User.findOne({where: { trainerCode: registerBody.trainerCode }});
+                        if (trainer == null || trainer == undefined) {
+                            res.status(400).send({'message': 'TRAINER_CODE_NOT_EXISTS'});
+                            return ;
                         }
                     }
-                    if (trainerCode == undefined) {
-                        res.status(400).send({'message': 'NOT_ABLE_TO_GENERATE_CODE'});
-                        return ;
+
+                    encryptedPassword = await bcrypt.hash(registerBody.password.trim(), 10);
+
+                    let email = registerBody.email;
+                    const token = jwt.sign(
+                        {email, isTrainer: registerBody.isTrainer},
+                        process.env.TOKEN_KEY,
+                        {expiresIn: '72h' }
+                    );
+
+                    var trainerCode = undefined;
+                    let active = true;
+                    if (registerBody.isTrainer) {
+                        for(let i = 0; i < 100; i++) {
+                            trainerCode = Date.now().toString(36).toUpperCase();
+                            let userCheck = await User.findOne({where: {trainerCode: trainerCode}});
+                            if (userCheck == undefined) {
+                                i = 100;
+                                active = false;
+                            } else {
+                                trainerCode = undefined;
+                            }
+                        }
+                        if (trainerCode == undefined) {
+                            res.status(400).send({'message': 'NOT_ABLE_TO_GENERATE_CODE'});
+                            return ;
+                        }
                     }
-                }
 
-                
-                //users.set(user.email, user);
-                let user = await User.create({
-                    email: registerBody.email.toLowerCase(),
-                    password: encryptedPassword,
-                    sex: registerBody.sex,
-                    birthDate: registerBody.birthDate,
-                    isTrainer: registerBody.isTrainer,
-                    trainerCode: trainerCode,
-                    name: registerBody.name,
-                    token: token,
-                    deviceId: registerBody.deviceId,
-                    goal: registerBody.goal,
-                    goalFull: registerBody.goalFull,
-                    height: registerBody.height,
-                    weight: registerBody.weight,
-                    active: active
-                });
-
-                user = await User.findOne({where: { email: registerBody.email }});
-
-                if (trainer != null && trainer != undefined) {
-                    // It is a trainee so match it with his trainer
-                    await Team.create({
-                        trainer: trainer.id,
-                        trainee: user.id
+                    
+                    //users.set(user.email, user);
+                    let user = await User.create({
+                        email: registerBody.email.toLowerCase(),
+                        password: encryptedPassword,
+                        sex: registerBody.sex,
+                        birthDate: registerBody.birthDate,
+                        isTrainer: registerBody.isTrainer,
+                        trainerCode: trainerCode,
+                        name: registerBody.name,
+                        token: token,
+                        deviceId: registerBody.deviceId,
+                        goal: registerBody.goal,
+                        goalFull: registerBody.goalFull,
+                        height: registerBody.height,
+                        weight: registerBody.weight,
+                        active: active
                     });
-                }
 
-                if (!user.active) {
-                    res.status(400).send({'message': 'USER_NOT_ACTIVE'});
+                    user = await User.findOne({where: { email: registerBody.email }});
+
+                    if (trainer != null && trainer != undefined) {
+                        // It is a trainee so match it with his trainer
+                        await Team.create({
+                            trainer: trainer.id,
+                            trainee: user.id
+                        });
+                    }
+
+                    if (!user.active) {
+                        res.status(400).send({'message': 'USER_NOT_ACTIVE'});
+                        return;
+                    }
+
+                    if (registerBody.isTrainer) {
+                        sendEmail(
+                            registerBody.email.toLowerCase(), 
+                            'Registro completado', 
+                            'Se ha completado tu registro como entrenador correctamente. Para poder iniciar sesión debemos activar tu cuenta, y para ello debes solicitarnos un plan en nuestra web: www.treina.app con este mismo email. En caso de cualquier duda o problema no dudes en contactarnos en treina.ayuda@gmail.com.');
+                    }
+
+                    res.status(200).json(user);
                     return;
-                }
-
-                if (registerBody.isTrainer) {
-                    sendEmail(
-                        registerBody.email.toLowerCase(), 
-                        'Registro completado', 
-                        'Se ha completado tu registro como entrenador correctamente. Para poder iniciar sesión debemos activar tu cuenta, y para ello debes solicitarnos un plan en nuestra web: www.treina.app con este mismo email. En caso de cualquier duda o problema no dudes en contactarnos en treina.ayuda@gmail.com.');
-                }
-
-                res.status(200).json(user);
+            } else {
+                res.status(400).send({'message': 'BAD_REQUEST'});
                 return;
-        } else {
-            res.status(400).send({'message': 'BAD_REQUEST'});
-            return;
+            }
         }
+    } catch (error) {
+        res.status(400).send({'message': 'INTERNAL_ERROR'});
+        return;
     }
 });
 app.post('/login', async (req, res) => {
-    const registerBody = req.body;
-    const email = registerBody.email;
-    const password = registerBody.password;
+    try {
+        const registerBody = req.body;
+        const email = registerBody.email;
+        const password = registerBody.password;
 
-    const searchUser = await User.findOne({ where: {email: email }});
+        const searchUser = await User.findOne({ where: {email: email }});
 
-    if (searchUser != undefined && searchUser.isTrainer == registerBody.isTrainer) {
-        if (searchUser.active) {
-            if (await bcrypt.compare(password, searchUser.password)) {
-                let result = new Object();
-                result.email = email;
-                result.token = await updateToken(searchUser.token);
-                result.name = searchUser.name;
-                res.status(200).json(result);
+        if (searchUser != undefined && searchUser.isTrainer == registerBody.isTrainer) {
+            if (searchUser.active) {
+                if (await bcrypt.compare(password, searchUser.password)) {
+                    let result = new Object();
+                    result.email = email;
+                    result.token = await updateToken(searchUser.token);
+                    result.name = searchUser.name;
+                    res.status(200).json(result);
+                } else {
+                    let message  = 'PASSWORD_INCORRECT';
+                    res.status(400).send({'message': message});
+                }
             } else {
-                let message  = 'PASSWORD_INCORRECT';
+                let message  = 'USER_NOT_ACTIVE';
                 res.status(400).send({'message': message});
             }
         } else {
-            let message  = 'USER_NOT_ACTIVE';
-            res.status(400).send({'message': message});
+            res.status(400).send({'message': 'USER_NOT_EXISTS'});
         }
-    } else {
-        res.status(400).send({'message': 'USER_NOT_EXISTS'});
+    } catch (error) {
+        res.status(400).send({'message': 'INTERNAL_ERROR'});
+        return ;
     }
 });
 app.post('/forgotpassword/code', async (req, res) => {
-    const reqBody = req.body;
-    if (reqBody.email != undefined && reqBody.email.trim() != '') {
-        let searchUser = await User.findOne({where: {email: reqBody.email}});
-        if (searchUser != undefined) {
-            let newCode = Date.now().toString(36).toUpperCase();
-            searchUser.recoverPasswordCode = newCode;
-            searchUser.recoverPasswordCodeDate = Date.now() + 300000;
-            await searchUser.save();
+    try {
+        const reqBody = req.body;
+        if (reqBody.email != undefined && reqBody.email.trim() != '') {
+            let searchUser = await User.findOne({where: {email: reqBody.email}});
+            if (searchUser != undefined) {
+                let newCode = Date.now().toString(36).toUpperCase();
+                searchUser.recoverPasswordCode = newCode;
+                searchUser.recoverPasswordCodeDate = Date.now() + 300000;
+                await searchUser.save();
 
-            sendEmail(reqBody.email, 'Cambio de contraseña', 'Su código para recuperar su contraseña es: ' + newCode.toString() + '\nRecuerda que el código será válido durante 5 minutos.')
+                sendEmail(reqBody.email, 'Cambio de contraseña', 'Su código para recuperar su contraseña es: ' + newCode.toString() + '\nRecuerda que el código será válido durante 5 minutos.')
 
-            res.status(200).send("OK");
-            return ;
+                res.status(200).send("OK");
+                return ;
+            } else {
+                res.status(400).send("EMAIL_NOT_EXISTS");
+                return ;
+            }
         } else {
-            res.status(400).send("EMAIL_NOT_EXISTS");
+            res.status(400).send("BAD_REQUEST");
             return ;
         }
-    } else {
-        res.status(400).send("BAD_REQUEST");
+    } catch (error) {
+        res.status(400).send("INTERNAL_ERROR");
         return ;
     }
 });
 app.post('/forgotpassword/newpassword', async (req, res) => {
-    const reqBody = req.body;
-    if (reqBody.email != undefined && reqBody.email.trim() != '' && 
-        reqBody.code != undefined && reqBody.code.trim() != '' && 
-        reqBody.password != undefined && reqBody.password.trim() != '' && 
-        reqBody.repeatPassword != undefined && reqBody.repeatPassword.trim() != '' && 
-        reqBody.password.trim() == reqBody.repeatPassword.trim()) {
-        let searchUser = await User.findOne({where: {email: reqBody.email}});
-        if (searchUser != undefined) {
-            if (searchUser.recoverPasswordCode == reqBody.code.trim() && Date.now() < searchUser.recoverPasswordCodeDate) {
-                searchUser.recoverPasswordCode = null;
-                searchUser.recoverPasswordCodeDate = null;
-                let encryptedPassword = await bcrypt.hash(reqBody.password.trim(), 10);
-                searchUser.password = encryptedPassword;
-                await searchUser.save();
-                res.status(200).send("OK");
-                return ;
+    try {
+        const reqBody = req.body;
+        if (reqBody.email != undefined && reqBody.email.trim() != '' && 
+            reqBody.code != undefined && reqBody.code.trim() != '' && 
+            reqBody.password != undefined && reqBody.password.trim() != '' && 
+            reqBody.repeatPassword != undefined && reqBody.repeatPassword.trim() != '' && 
+            reqBody.password.trim() == reqBody.repeatPassword.trim()) {
+            let searchUser = await User.findOne({where: {email: reqBody.email}});
+            if (searchUser != undefined) {
+                if (searchUser.recoverPasswordCode == reqBody.code.trim() && Date.now() < searchUser.recoverPasswordCodeDate) {
+                    searchUser.recoverPasswordCode = null;
+                    searchUser.recoverPasswordCodeDate = null;
+                    let encryptedPassword = await bcrypt.hash(reqBody.password.trim(), 10);
+                    searchUser.password = encryptedPassword;
+                    await searchUser.save();
+                    res.status(200).send("OK");
+                    return ;
+                } else {
+                    res.status(400).send("CODE_NOT_VALID");
+                    return ;
+                }
             } else {
-                res.status(400).send("CODE_NOT_VALID");
+                res.status(400).send("EMAIL_NOT_EXISTS");
                 return ;
             }
         } else {
-            res.status(400).send("EMAIL_NOT_EXISTS");
+            res.status(400).send("BAD_REQUEST");
             return ;
         }
-    } else {
-        res.status(400).send("BAD_REQUEST");
+    } catch (error) {
+        res.status(400).send("INTERNAL_ERROR");
         return ;
     }
 });
 
 app.post('/trainer/trainees', async (req, res) => {
-    let userToken = req.headers.token;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        let result = [];
-        let trainees = await Team.findAll({where: {trainer: searchUser.id}});
-        if (trainees == null || trainees == undefined) {
-            trainees = [];
-        }
-        for (let i = 0; i < trainees.length; i++) {
-            let t = await User.findOne({where: {id: trainees[i].getDataValue('trainee')}, raw: true});
-            if (t != null && t != undefined) {
-                let history = await UserMeasuresHistory.findAll({where: {trainee: t.id}, limit: 1, order: [['createdAt', 'DESC']]});
-                if (history != undefined && history.length == 1) {
-                    t.lastMeasuresUpdate = history[0].getDataValue('createdAt');
-                }
-                result.push(t);
+    try {
+        let userToken = req.headers.token;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            let result = [];
+            let trainees = await Team.findAll({where: {trainer: searchUser.id}});
+            if (trainees == null || trainees == undefined) {
+                trainees = [];
             }
+            for (let i = 0; i < trainees.length; i++) {
+                let t = await User.findOne({where: {id: trainees[i].getDataValue('trainee')}, raw: true});
+                if (t != null && t != undefined) {
+                    let history = await UserMeasuresHistory.findAll({where: {trainee: t.id}, limit: 1, order: [['createdAt', 'DESC']]});
+                    if (history != undefined && history.length == 1) {
+                        t.lastMeasuresUpdate = history[0].getDataValue('createdAt');
+                    }
+                    result.push(t);
+                }
+            }
+            res.status(200).json(result);
+            return;
         }
-        res.status(200).json(result);
-        return;
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
+        return ;
     }
 });
 app.post('/trainer/trainees/delete', async (req, res) => {
-    let userToken = req.headers.token;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
+    try {
+        let userToken = req.headers.token;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
 
-    const reqBody = req.body;
+        const reqBody = req.body;
 
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        if (reqBody.id != undefined) {
-            let trainee = await User.findOne({where: {id: reqBody.id}});
-
-            if (trainee == undefined) {
-                res.status(400).send('BAD_INFORMATION');
-                return ;
-            } else {
-                await TraineeExercice.destroy({where: {trainee: reqBody.id}});
-                await TraineeFood.destroy({where: {trainee: reqBody.id}});
-                await Team.destroy({where: {trainer: searchUser.id, trainee: reqBody.id}});
-
-                res.status(200).json("DELETED");
-                return ;
-            }
-        } else {
-            res.status(400).send('BAD_INFORMATION');
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
             return;
+        } else {
+            if (reqBody.id != undefined) {
+                let trainee = await User.findOne({where: {id: reqBody.id}});
+
+                if (trainee == undefined) {
+                    res.status(400).send('BAD_INFORMATION');
+                    return ;
+                } else {
+                    await TraineeExercice.destroy({where: {trainee: reqBody.id}});
+                    await TraineeFood.destroy({where: {trainee: reqBody.id}});
+                    await Team.destroy({where: {trainer: searchUser.id, trainee: reqBody.id}});
+
+                    res.status(200).json("DELETED");
+                    return ;
+                }
+            } else {
+                res.status(400).send('BAD_INFORMATION');
+                return;
+            }
         }
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
+        return;
     }
 });
 app.post('/trainer/trainees/:traineeId/profile', async (req, res) => {
-    let userToken = req.headers.token;
-    let traineeId = req.params.traineeId;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        let trainee = await User.findOne({where: {id: traineeId}, attributes: {exclude: ['password', 'recoverPasswordCode', 'recoverPasswordCodeDate', 'active']}});
-        res.status(200).json(trainee);
+    try {
+        let userToken = req.headers.token;
+        let traineeId = req.params.traineeId;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            let trainee = await User.findOne({where: {id: traineeId}, attributes: {exclude: ['password', 'recoverPasswordCode', 'recoverPasswordCodeDate', 'active']}});
+            res.status(200).json(trainee);
+            return;
+        }
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
         return;
     }
 });
 app.post('/trainer/trainees/:traineeId/history', async (req, res) => {
-    let userToken = req.headers.token;
-    let traineeId = req.params.traineeId;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        let historicalData = await UserMeasuresHistory.findAll({where: {trainee: traineeId}, order: [['createdAt', 'DESC']]});
-        res.status(200).json(historicalData);
+    try {
+        let userToken = req.headers.token;
+        let traineeId = req.params.traineeId;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            let historicalData = await UserMeasuresHistory.findAll({where: {trainee: traineeId}, order: [['createdAt', 'DESC']]});
+            res.status(200).json(historicalData);
+            return;
+        }
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
         return;
     }
 });
 app.post('/trainer/trainees/:traineeId/food', async (req, res) => {
-    let userToken = req.headers.token;
-    let traineeId = req.params.traineeId;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        let food = await TraineeFood.findAll({where: {trainee: traineeId}, include: [FoodType, ShoppingElementTraineeFood]});
-        res.status(200).json(food);
+    try {
+        let userToken = req.headers.token;
+        let traineeId = req.params.traineeId;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            let food = await TraineeFood.findAll({where: {trainee: traineeId}, include: [FoodType, ShoppingElementTraineeFood]});
+            res.status(200).json(food);
+            return;
+        }
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
         return;
     }
 });
 app.post('/trainer/trainees/:traineeId/food/new', async (req, res) => {
-    let userToken = req.headers.token;
-    let traineeId = req.params.traineeId;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
+    try {
+        let userToken = req.headers.token;
+        let traineeId = req.params.traineeId;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
 
-    const reqBody = req.body;
+        const reqBody = req.body;
 
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        if (reqBody.title != undefined && reqBody.title.trim() != '' &&
-            reqBody.description != undefined && reqBody.description.trim() != '' && 
-            reqBody.onMonday != undefined && 
-            reqBody.onTuesday != undefined && 
-            reqBody.onWednesday != undefined && 
-            reqBody.onThursday != undefined && 
-            reqBody.onFriday != undefined && 
-            reqBody.onSaturday != undefined && 
-            reqBody.onSunday != undefined && 
-            reqBody.foodType != undefined && reqBody.foodType.trim() != '' && 
-            reqBody.amount != undefined && reqBody.amount.trim() != '') {
-
-            const foodType = await FoodType.findOne({where: {code: reqBody.foodType }});
-            const trainee = await User.findOne({where: {id: traineeId}});
-
-            if (foodType != undefined && trainee != undefined) {
-                const food = await TraineeFood.create({
-                    title: reqBody.title,
-                    description: reqBody.description,
-                    amount: reqBody.amount,
-                    foodType: foodType.id,
-                    onMonday: reqBody.onMonday,
-                    onTuesday: reqBody.onTuesday,
-                    onWednesday: reqBody.onWednesday,
-                    onThursday: reqBody.onThursday,
-                    onFriday: reqBody.onFriday,
-                    onSaturday: reqBody.onSaturday,
-                    onSunday: reqBody.onSunday,
-                    trainee: traineeId
-                });
-
-                shopList = [];
-                if (reqBody.shoppingList != undefined && reqBody.shoppingList.length > 0) {
-                    for (let i = 0; i < reqBody.shoppingList.length; i++) {
-                        if (reqBody.shoppingList[i].title != null && reqBody.shoppingList[i].title.trim() != '') {
-                            let description = '';
-                            if (reqBody.shoppingList[i].description != undefined && reqBody.shoppingList[i].description != null) {
-                                description = reqBody.shoppingList[i].description;
-                            } 
-                            const elem = await ShoppingElementTraineeFood.create({
-                                title: reqBody.shoppingList[i].title,
-                                description: description,
-                                traineeFood: food.id
-                            });
-                            shopList.push(elem);
-                        }
-                    }
-                }
-                food.shoppingList = shopList;
-
-                res.status(200).json(food);
-                return;
-            } else {
-                res.status(400).send('BAD_INFORMATION');
-                return ;
-            }
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
         } else {
-            res.status(400).send('BAD_INFORMATION');
-            return ;
-        }
-    }
-});
-app.post('/trainer/trainees/:traineeId/food/edit', async (req, res) => {
-    let userToken = req.headers.token;
-    let traineeId = req.params.traineeId;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
+            if (reqBody.title != undefined && reqBody.title.trim() != '' &&
+                reqBody.description != undefined && reqBody.description.trim() != '' && 
+                reqBody.onMonday != undefined && 
+                reqBody.onTuesday != undefined && 
+                reqBody.onWednesday != undefined && 
+                reqBody.onThursday != undefined && 
+                reqBody.onFriday != undefined && 
+                reqBody.onSaturday != undefined && 
+                reqBody.onSunday != undefined && 
+                reqBody.foodType != undefined && reqBody.foodType.trim() != '' && 
+                reqBody.amount != undefined && reqBody.amount.trim() != '') {
 
-    const reqBody = req.body;
+                const foodType = await FoodType.findOne({where: {code: reqBody.foodType }});
+                const trainee = await User.findOne({where: {id: traineeId}});
 
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        if (reqBody.id != undefined &&
-            reqBody.title != undefined && reqBody.title.trim() != '' &&
-            reqBody.description != undefined && reqBody.description.trim() != '' && 
-            reqBody.onMonday != undefined && 
-            reqBody.onTuesday != undefined && 
-            reqBody.onWednesday != undefined && 
-            reqBody.onThursday != undefined && 
-            reqBody.onFriday != undefined && 
-            reqBody.onSaturday != undefined && 
-            reqBody.onSunday != undefined && 
-            reqBody.foodType != undefined && reqBody.foodType.trim() != '' && 
-            reqBody.amount != undefined && reqBody.amount.trim() != '') {
-
-            const foodType = await FoodType.findOne({where: {code: reqBody.foodType }});
-            const trainee = await User.findOne({where: {id: traineeId}});
-
-            if (foodType != undefined && trainee != undefined) {
-
-                let food = await TraineeFood.findOne({where: { id: reqBody.id }});
-
-                if (food != undefined) {
-                    food.title = reqBody.title;
-                    food.description = reqBody.description;
-                    food.amount = reqBody.amount;
-                    food.foodType = foodType.id;
-                    food.onMonday = reqBody.onMonday;
-                    food.onTuesday = reqBody.onTuesday;
-                    food.onWednesday = reqBody.onWednesday;
-                    food.onThursday = reqBody.onThursday;
-                    food.onFriday = reqBody.onFriday;
-                    food.onSaturday = reqBody.onSaturday;
-                    food.onSunday = reqBody.onSunday;
-
-                    food = await food.save();
+                if (foodType != undefined && trainee != undefined) {
+                    const food = await TraineeFood.create({
+                        title: reqBody.title,
+                        description: reqBody.description,
+                        amount: reqBody.amount,
+                        foodType: foodType.id,
+                        onMonday: reqBody.onMonday,
+                        onTuesday: reqBody.onTuesday,
+                        onWednesday: reqBody.onWednesday,
+                        onThursday: reqBody.onThursday,
+                        onFriday: reqBody.onFriday,
+                        onSaturday: reqBody.onSaturday,
+                        onSunday: reqBody.onSunday,
+                        trainee: traineeId
+                    });
 
                     shopList = [];
                     if (reqBody.shoppingList != undefined && reqBody.shoppingList.length > 0) {
                         for (let i = 0; i < reqBody.shoppingList.length; i++) {
-                            if (reqBody.shoppingList[i].new != undefined && reqBody.shoppingList[i].new) {
+                            if (reqBody.shoppingList[i].title != null && reqBody.shoppingList[i].title.trim() != '') {
+                                let description = '';
+                                if (reqBody.shoppingList[i].description != undefined && reqBody.shoppingList[i].description != null) {
+                                    description = reqBody.shoppingList[i].description;
+                                } 
                                 const elem = await ShoppingElementTraineeFood.create({
                                     title: reqBody.shoppingList[i].title,
-                                    description: reqBody.shoppingList[i].description,
+                                    description: description,
                                     traineeFood: food.id
                                 });
                                 shopList.push(elem);
-                            } else {
-                                let elem = await ShoppingElementTraineeFood.findOne({where: {id: reqBody.shoppingList[i].id}});
-                                if (elem != undefined) {
-                                    if (reqBody.shoppingList[i].delete) {
-                                        await elem.destroy();
-                                    } else {
-                                        elem.title = reqBody.shoppingList[i].title;
-                                        elem.description = reqBody.shoppingList[i].description;
-                                        await elem.save();
-                                        shopList.push(elem);
-                                    }
-                                }
                             }
                         }
                     }
@@ -692,95 +656,568 @@ app.post('/trainer/trainees/:traineeId/food/edit', async (req, res) => {
                 res.status(400).send('BAD_INFORMATION');
                 return ;
             }
-        } else {
-            res.status(400).send('BAD_INFORMATION');
-            return ;
         }
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
+        return ;
+    }
+});
+app.post('/trainer/trainees/:traineeId/food/edit', async (req, res) => {
+    try {
+        let userToken = req.headers.token;
+        let traineeId = req.params.traineeId;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+
+        const reqBody = req.body;
+
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            if (reqBody.id != undefined &&
+                reqBody.title != undefined && reqBody.title.trim() != '' &&
+                reqBody.description != undefined && reqBody.description.trim() != '' && 
+                reqBody.onMonday != undefined && 
+                reqBody.onTuesday != undefined && 
+                reqBody.onWednesday != undefined && 
+                reqBody.onThursday != undefined && 
+                reqBody.onFriday != undefined && 
+                reqBody.onSaturday != undefined && 
+                reqBody.onSunday != undefined && 
+                reqBody.foodType != undefined && reqBody.foodType.trim() != '' && 
+                reqBody.amount != undefined && reqBody.amount.trim() != '') {
+
+                const foodType = await FoodType.findOne({where: {code: reqBody.foodType }});
+                const trainee = await User.findOne({where: {id: traineeId}});
+
+                if (foodType != undefined && trainee != undefined) {
+
+                    let food = await TraineeFood.findOne({where: { id: reqBody.id }});
+
+                    if (food != undefined) {
+                        food.title = reqBody.title;
+                        food.description = reqBody.description;
+                        food.amount = reqBody.amount;
+                        food.foodType = foodType.id;
+                        food.onMonday = reqBody.onMonday;
+                        food.onTuesday = reqBody.onTuesday;
+                        food.onWednesday = reqBody.onWednesday;
+                        food.onThursday = reqBody.onThursday;
+                        food.onFriday = reqBody.onFriday;
+                        food.onSaturday = reqBody.onSaturday;
+                        food.onSunday = reqBody.onSunday;
+
+                        food = await food.save();
+
+                        shopList = [];
+                        if (reqBody.shoppingList != undefined && reqBody.shoppingList.length > 0) {
+                            for (let i = 0; i < reqBody.shoppingList.length; i++) {
+                                if (reqBody.shoppingList[i].new != undefined && reqBody.shoppingList[i].new) {
+                                    const elem = await ShoppingElementTraineeFood.create({
+                                        title: reqBody.shoppingList[i].title,
+                                        description: reqBody.shoppingList[i].description,
+                                        traineeFood: food.id
+                                    });
+                                    shopList.push(elem);
+                                } else {
+                                    let elem = await ShoppingElementTraineeFood.findOne({where: {id: reqBody.shoppingList[i].id}});
+                                    if (elem != undefined) {
+                                        if (reqBody.shoppingList[i].delete) {
+                                            await elem.destroy();
+                                        } else {
+                                            elem.title = reqBody.shoppingList[i].title;
+                                            elem.description = reqBody.shoppingList[i].description;
+                                            await elem.save();
+                                            shopList.push(elem);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        food.shoppingList = shopList;
+
+                        res.status(200).json(food);
+                        return;
+                    } else {
+                        res.status(400).send('BAD_INFORMATION');
+                        return ;
+                    }
+                } else {
+                    res.status(400).send('BAD_INFORMATION');
+                    return ;
+                }
+            } else {
+                res.status(400).send('BAD_INFORMATION');
+                return ;
+            }
+        }
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
+        return ;
     }
 });
 app.post('/trainer/trainees/:traineeId/food/delete', async (req, res) => {
-    let userToken = req.headers.token;
-    let traineeId = req.params.traineeId;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
+    try {
+        let userToken = req.headers.token;
+        let traineeId = req.params.traineeId;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
 
-    const reqBody = req.body;
+        const reqBody = req.body;
 
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        if (reqBody.id != undefined) {
-
-            let food = await TraineeFood.findOne({where: { id: reqBody.id }});
-
-            const trainee = await User.findOne({where: {id: traineeId}});
-
-            if (food == undefined || trainee == undefined) {
-                res.status(400).send('BAD_INFORMATION');
-                return ;
-            } else {
-                await food.destroy();
-
-                res.status(200).json("DELETED");
-                return ;
-            }
-        } else {
-            res.status(400).send('BAD_INFORMATION');
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
             return;
+        } else {
+            if (reqBody.id != undefined) {
+
+                let food = await TraineeFood.findOne({where: { id: reqBody.id }});
+
+                const trainee = await User.findOne({where: {id: traineeId}});
+
+                if (food == undefined || trainee == undefined) {
+                    res.status(400).send('BAD_INFORMATION');
+                    return ;
+                } else {
+                    await food.destroy();
+
+                    res.status(200).json("DELETED");
+                    return ;
+                }
+            } else {
+                res.status(400).send('BAD_INFORMATION');
+                return;
+            }
         }
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
+        return;
     }
 });
 app.post('/trainer/trainees/:traineeId/exercices', async (req, res) => {
-    let userToken = req.headers.token;
-    let traineeId = req.params.traineeId;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        let exercices = await TraineeExercice.findAll({where: {trainee: traineeId}});
-        res.status(200).json(exercices);
+    try {
+        let userToken = req.headers.token;
+        let traineeId = req.params.traineeId;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            let exercices = await TraineeExercice.findAll({where: {trainee: traineeId}});
+            res.status(200).json(exercices);
+            return;
+        }
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
         return;
     }
 });
 app.post('/trainer/trainees/:traineeId/exercices/new', async (req, res) => {
-    let userToken = req.headers.token;
-    let traineeId = req.params.traineeId;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
+    try {
+        let userToken = req.headers.token;
+        let traineeId = req.params.traineeId;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
 
-    const reqBody = req.body;
+        const reqBody = req.body;
 
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        if (reqBody.title != undefined && reqBody.title.trim() != '' &&
-            reqBody.description != undefined && reqBody.description.trim() != '' && 
-            reqBody.observations != undefined && reqBody.observations.trim() != '' && 
-            reqBody.onMonday != undefined && 
-            reqBody.onTuesday != undefined && 
-            reqBody.onWednesday != undefined && 
-            reqBody.onThursday != undefined && 
-            reqBody.onFriday != undefined && 
-            reqBody.onSaturday != undefined && 
-            reqBody.onSunday != undefined && 
-            reqBody.repetitions != undefined && reqBody.repetitions.trim() != '' &&
-            reqBody.rest != undefined && reqBody.rest.trim() != '' &&
-            reqBody.series != undefined && reqBody.series.trim() != '') {
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            if (reqBody.title != undefined && reqBody.title.trim() != '' &&
+                reqBody.description != undefined && reqBody.description.trim() != '' && 
+                reqBody.observations != undefined && reqBody.observations.trim() != '' && 
+                reqBody.onMonday != undefined && 
+                reqBody.onTuesday != undefined && 
+                reqBody.onWednesday != undefined && 
+                reqBody.onThursday != undefined && 
+                reqBody.onFriday != undefined && 
+                reqBody.onSaturday != undefined && 
+                reqBody.onSunday != undefined && 
+                reqBody.repetitions != undefined && reqBody.repetitions.trim() != '' &&
+                reqBody.rest != undefined && reqBody.rest.trim() != '' &&
+                reqBody.series != undefined && reqBody.series.trim() != '') {
 
-            const trainee = await User.findOne({where: {id: traineeId}});
+                const trainee = await User.findOne({where: {id: traineeId}});
 
-            if (trainee == undefined) {
+                if (trainee == undefined) {
+                    res.status(400).send('BAD_INFORMATION');
+                    return ;
+                } else {
+                    const exercice = await TraineeExercice.create({
+                        title: reqBody.title,
+                        description: reqBody.description,
+                        observations: reqBody.observations,
+                        repetitions: reqBody.repetitions,
+                        rest: reqBody.rest,
+                        series: reqBody.series,
+                        onMonday: reqBody.onMonday,
+                        onTuesday: reqBody.onTuesday,
+                        onWednesday: reqBody.onWednesday,
+                        onThursday: reqBody.onThursday,
+                        onFriday: reqBody.onFriday,
+                        onSaturday: reqBody.onSaturday,
+                        onSunday: reqBody.onSunday,
+                        trainee: traineeId
+                    });
+        
+                    res.status(200).json(exercice);
+                    return;
+                }
+            } else {
                 res.status(400).send('BAD_INFORMATION');
                 return ;
+            }
+        }
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
+        return ;
+    }
+});
+app.post('/trainer/trainees/:traineeId/exercices/edit', async (req, res) => {
+    try {
+        let userToken = req.headers.token;
+        let traineeId = req.params.traineeId;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+
+        const reqBody = req.body;
+
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            if (reqBody.id != undefined && 
+                reqBody.title != undefined && reqBody.title.trim() != '' &&
+                reqBody.description != undefined && reqBody.description.trim() != '' && 
+                reqBody.observations != undefined && reqBody.observations.trim() != '' && 
+                reqBody.onMonday != undefined && 
+                reqBody.onTuesday != undefined && 
+                reqBody.onWednesday != undefined && 
+                reqBody.onThursday != undefined && 
+                reqBody.onFriday != undefined && 
+                reqBody.onSaturday != undefined && 
+                reqBody.onSunday != undefined && 
+                reqBody.repetitions != undefined && reqBody.repetitions.trim() != '' &&
+                reqBody.rest != undefined && reqBody.rest.trim() != '' &&
+                reqBody.series != undefined && reqBody.series.trim() != '') {
+
+                let exercice = await TraineeExercice.findOne({where: { id: reqBody.id }});
+
+                const trainee = await User.findOne({where: {id: traineeId}});
+
+                if (exercice == undefined || trainee == undefined) {
+                    res.status(400).send('BAD_INFORMATION');
+                    return ;
+                } else {
+                    exercice.title = reqBody.title;
+                    exercice.description = reqBody.description;
+                    exercice.observations = reqBody.observations;
+                    exercice.repetitions = reqBody.repetitions;
+                    exercice.rest = reqBody.rest;
+                    exercice.series = reqBody.series;
+                    exercice.onMonday = reqBody.onMonday;
+                    exercice.onTuesday = reqBody.onTuesday;
+                    exercice.onWednesday = reqBody.onWednesday;
+                    exercice.onThursday = reqBody.onThursday;
+                    exercice.onFriday = reqBody.onFriday;
+                    exercice.onSaturday = reqBody.onSaturday;
+                    exercice.onSunday = reqBody.onSunday;
+
+                    await exercice.save();
+
+                    res.status(200).json(exercice);
+                    return;
+                }
             } else {
-                const exercice = await TraineeExercice.create({
+                res.status(400).send('BAD_INFORMATION');
+                return ;
+            }
+        }
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
+        return ;
+    }
+});
+app.post('/trainer/trainees/:traineeId/exercices/delete', async (req, res) => {
+    try {
+        let userToken = req.headers.token;
+        let traineeId = req.params.traineeId;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+
+        const reqBody = req.body;
+
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            if (reqBody.id != undefined) {
+
+                let exercice = await TraineeExercice.findOne({where: { id: reqBody.id }});
+
+                const trainee = await User.findOne({where: {id: traineeId}});
+
+                if (exercice == undefined || trainee == undefined) {
+                    res.status(400).send('BAD_INFORMATION');
+                    return ;
+                } else {
+                    await exercice.destroy();
+
+                    res.status(200).json("DELETED");
+                    return ;
+                }
+            } else {
+                res.status(400).send('BAD_INFORMATION');
+                return;
+            }
+        }
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
+        return;
+    }
+});
+app.post('/trainer/data/food', async (req, res) => {
+    try {
+        let userToken = req.headers.token;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            let food = await TrainerFood.findAll({where: {trainer: searchUser.id}, include: [FoodType, ShoppingElementTrainerFood]});
+            res.status(200).json(food);
+            return;
+        }
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
+        return;
+    }
+});
+app.post('/trainer/data/exercices', async (req, res) => {
+    try {
+        let userToken = req.headers.token;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            let exercices = await TrainerExercice.findAll({where: {trainer: searchUser.id}});
+            res.status(200).json(exercices);
+            return;
+        }
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
+        return;
+    }
+});
+app.post('/trainer/data/food/new', async (req, res) => {
+    try {
+        let userToken = req.headers.token;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+
+        const reqBody = req.body;
+
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            if (reqBody.title != undefined && reqBody.title.trim() != '' &&
+                reqBody.description != undefined && reqBody.description.trim() != '' && 
+                reqBody.onMonday != undefined && 
+                reqBody.onTuesday != undefined && 
+                reqBody.onWednesday != undefined && 
+                reqBody.onThursday != undefined && 
+                reqBody.onFriday != undefined && 
+                reqBody.onSaturday != undefined && 
+                reqBody.onSunday != undefined && 
+                reqBody.foodType != undefined && reqBody.foodType.trim() != '' && 
+                reqBody.amount != undefined && reqBody.amount.trim() != '') {
+
+                const foodType = await FoodType.findOne({where: {code: reqBody.foodType }});
+
+                if (foodType != undefined) {
+                    const food = await TrainerFood.create({
+                        title: reqBody.title,
+                        description: reqBody.description,
+                        amount: reqBody.amount,
+                        foodType: foodType.id,
+                        onMonday: reqBody.onMonday,
+                        onTuesday: reqBody.onTuesday,
+                        onWednesday: reqBody.onWednesday,
+                        onThursday: reqBody.onThursday,
+                        onFriday: reqBody.onFriday,
+                        onSaturday: reqBody.onSaturday,
+                        onSunday: reqBody.onSunday,
+                        trainer: searchUser.id
+                    });
+
+                    shopList = [];
+                    if (reqBody.shoppingList != undefined && reqBody.shoppingList.length > 0) {
+                        for (let i = 0; i < reqBody.shoppingList.length; i++) {
+                            const elem = await ShoppingElementTrainerFood.create({
+                                title: reqBody.shoppingList[i].title,
+                                description: reqBody.shoppingList[i].description,
+                                trainerFood: food.id
+                            });
+                            shopList.push(elem);
+                        }
+                    }
+                    food.shoppingList = shopList;
+
+                    res.status(200).json(food);
+                    return;
+                } else {
+                    res.status(400).send('BAD_INFORMATION');
+                    return ;
+                }
+            } else {
+                res.status(400).send('BAD_INFORMATION');
+                return ;
+            }
+        }
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
+        return;
+    }
+});
+app.post('/trainer/data/food/edit', async (req, res) => {
+    try {
+        let userToken = req.headers.token;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+
+        const reqBody = req.body;
+
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            if (reqBody.id != undefined &&
+                reqBody.title != undefined && reqBody.title.trim() != '' &&
+                reqBody.description != undefined && reqBody.description.trim() != '' && 
+                reqBody.onMonday != undefined && 
+                reqBody.onTuesday != undefined && 
+                reqBody.onWednesday != undefined && 
+                reqBody.onThursday != undefined && 
+                reqBody.onFriday != undefined && 
+                reqBody.onSaturday != undefined && 
+                reqBody.onSunday != undefined && 
+                reqBody.foodType != undefined && reqBody.foodType.trim() != '' && 
+                reqBody.amount != undefined && reqBody.amount.trim() != '') {
+
+                const foodType = await FoodType.findOne({where: {code: reqBody.foodType }});
+
+                if (foodType != undefined) {
+
+                    let food = await TrainerFood.findOne({where: { id: reqBody.id }});
+
+                    if (food != undefined) {
+                        food.title = reqBody.title;
+                        food.description = reqBody.description;
+                        food.amount = reqBody.amount;
+                        food.foodType = foodType.id;
+                        food.onMonday = reqBody.onMonday;
+                        food.onTuesday = reqBody.onTuesday;
+                        food.onWednesday = reqBody.onWednesday;
+                        food.onThursday = reqBody.onThursday;
+                        food.onFriday = reqBody.onFriday;
+                        food.onSaturday = reqBody.onSaturday;
+                        food.onSunday = reqBody.onSunday;
+
+                        food = await food.save();
+
+                        shopList = [];
+                        if (reqBody.shoppingList != undefined && reqBody.shoppingList.length > 0) {
+                            for (let i = 0; i < reqBody.shoppingList.length; i++) {
+                                if (reqBody.shoppingList[i].new != undefined && reqBody.shoppingList[i].new) {
+                                    const elem = await ShoppingElementTrainerFood.create({
+                                        title: reqBody.shoppingList[i].title,
+                                        description: reqBody.shoppingList[i].description,
+                                        trainerFood: food.id
+                                    });
+                                    shopList.push(elem);
+                                } else {
+                                    let elem = await ShoppingElementTrainerFood.findOne({where: {id: reqBody.shoppingList[i].id}});
+                                    if (elem != undefined) {
+                                        if (reqBody.shoppingList[i].delete) {
+                                            await elem.destroy();
+                                        } else {
+                                            elem.title = reqBody.shoppingList[i].title;
+                                            elem.description = reqBody.shoppingList[i].description;
+                                            await elem.save();
+                                            shopList.push(elem);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        food.shoppingList = shopList;
+
+                        res.status(200).json(food);
+                        return;
+                    } else {
+                        res.status(400).send('BAD_INFORMATION');
+                        return ;
+                    }
+                } else {
+                    res.status(400).send('BAD_INFORMATION');
+                    return ;
+                }
+            } else {
+                res.status(400).send('BAD_INFORMATION');
+                return ;
+            }
+        }
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
+        return;
+    }
+});
+app.post('/trainer/data/exercices/new', async (req, res) => {
+    try {
+        let userToken = req.headers.token;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+
+        const reqBody = req.body;
+
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            if (reqBody.title != undefined && reqBody.title.trim() != '' &&
+                reqBody.description != undefined && reqBody.description.trim() != '' && 
+                reqBody.observations != undefined && reqBody.observations.trim() != '' && 
+                reqBody.onMonday != undefined && 
+                reqBody.onTuesday != undefined && 
+                reqBody.onWednesday != undefined && 
+                reqBody.onThursday != undefined && 
+                reqBody.onFriday != undefined && 
+                reqBody.onSaturday != undefined && 
+                reqBody.onSunday != undefined && 
+                reqBody.repetitions != undefined && reqBody.repetitions.trim() != '' &&
+                reqBody.rest != undefined && reqBody.rest.trim() != '' &&
+                reqBody.series != undefined && reqBody.series.trim() != '') {
+
+                const exercice = await TrainerExercice.create({
                     title: reqBody.title,
                     description: reqBody.description,
                     observations: reqBody.observations,
@@ -794,649 +1231,377 @@ app.post('/trainer/trainees/:traineeId/exercices/new', async (req, res) => {
                     onFriday: reqBody.onFriday,
                     onSaturday: reqBody.onSaturday,
                     onSunday: reqBody.onSunday,
-                    trainee: traineeId
-                });
-    
-                res.status(200).json(exercice);
-                return;
-            }
-        } else {
-            res.status(400).send('BAD_INFORMATION');
-            return ;
-        }
-    }
-});
-app.post('/trainer/trainees/:traineeId/exercices/edit', async (req, res) => {
-    let userToken = req.headers.token;
-    let traineeId = req.params.traineeId;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
-
-    const reqBody = req.body;
-
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        if (reqBody.id != undefined && 
-            reqBody.title != undefined && reqBody.title.trim() != '' &&
-            reqBody.description != undefined && reqBody.description.trim() != '' && 
-            reqBody.observations != undefined && reqBody.observations.trim() != '' && 
-            reqBody.onMonday != undefined && 
-            reqBody.onTuesday != undefined && 
-            reqBody.onWednesday != undefined && 
-            reqBody.onThursday != undefined && 
-            reqBody.onFriday != undefined && 
-            reqBody.onSaturday != undefined && 
-            reqBody.onSunday != undefined && 
-            reqBody.repetitions != undefined && reqBody.repetitions.trim() != '' &&
-            reqBody.rest != undefined && reqBody.rest.trim() != '' &&
-            reqBody.series != undefined && reqBody.series.trim() != '') {
-
-            let exercice = await TraineeExercice.findOne({where: { id: reqBody.id }});
-
-            const trainee = await User.findOne({where: {id: traineeId}});
-
-            if (exercice == undefined || trainee == undefined) {
-                res.status(400).send('BAD_INFORMATION');
-                return ;
-            } else {
-                exercice.title = reqBody.title;
-                exercice.description = reqBody.description;
-                exercice.observations = reqBody.observations;
-                exercice.repetitions = reqBody.repetitions;
-                exercice.rest = reqBody.rest;
-                exercice.series = reqBody.series;
-                exercice.onMonday = reqBody.onMonday;
-                exercice.onTuesday = reqBody.onTuesday;
-                exercice.onWednesday = reqBody.onWednesday;
-                exercice.onThursday = reqBody.onThursday;
-                exercice.onFriday = reqBody.onFriday;
-                exercice.onSaturday = reqBody.onSaturday;
-                exercice.onSunday = reqBody.onSunday;
-
-                await exercice.save();
-
-                res.status(200).json(exercice);
-                return;
-            }
-        } else {
-            res.status(400).send('BAD_INFORMATION');
-            return ;
-        }
-    }
-});
-app.post('/trainer/trainees/:traineeId/exercices/delete', async (req, res) => {
-    let userToken = req.headers.token;
-    let traineeId = req.params.traineeId;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
-
-    const reqBody = req.body;
-
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        if (reqBody.id != undefined) {
-
-            let exercice = await TraineeExercice.findOne({where: { id: reqBody.id }});
-
-            const trainee = await User.findOne({where: {id: traineeId}});
-
-            if (exercice == undefined || trainee == undefined) {
-                res.status(400).send('BAD_INFORMATION');
-                return ;
-            } else {
-                await exercice.destroy();
-
-                res.status(200).json("DELETED");
-                return ;
-            }
-        } else {
-            res.status(400).send('BAD_INFORMATION');
-            return;
-        }
-    }
-});
-app.post('/trainer/data/food', async (req, res) => {
-    let userToken = req.headers.token;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        let food = await TrainerFood.findAll({where: {trainer: searchUser.id}, include: [FoodType, ShoppingElementTrainerFood]});
-        res.status(200).json(food);
-        return;
-    }
-});
-app.post('/trainer/data/exercices', async (req, res) => {
-    let userToken = req.headers.token;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        let exercices = await TrainerExercice.findAll({where: {trainer: searchUser.id}});
-        res.status(200).json(exercices);
-        return;
-    }
-});
-app.post('/trainer/data/food/new', async (req, res) => {
-    let userToken = req.headers.token;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
-
-    const reqBody = req.body;
-
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        if (reqBody.title != undefined && reqBody.title.trim() != '' &&
-            reqBody.description != undefined && reqBody.description.trim() != '' && 
-            reqBody.onMonday != undefined && 
-            reqBody.onTuesday != undefined && 
-            reqBody.onWednesday != undefined && 
-            reqBody.onThursday != undefined && 
-            reqBody.onFriday != undefined && 
-            reqBody.onSaturday != undefined && 
-            reqBody.onSunday != undefined && 
-            reqBody.foodType != undefined && reqBody.foodType.trim() != '' && 
-            reqBody.amount != undefined && reqBody.amount.trim() != '') {
-
-            const foodType = await FoodType.findOne({where: {code: reqBody.foodType }});
-
-            if (foodType != undefined) {
-                const food = await TrainerFood.create({
-                    title: reqBody.title,
-                    description: reqBody.description,
-                    amount: reqBody.amount,
-                    foodType: foodType.id,
-                    onMonday: reqBody.onMonday,
-                    onTuesday: reqBody.onTuesday,
-                    onWednesday: reqBody.onWednesday,
-                    onThursday: reqBody.onThursday,
-                    onFriday: reqBody.onFriday,
-                    onSaturday: reqBody.onSaturday,
-                    onSunday: reqBody.onSunday,
                     trainer: searchUser.id
                 });
 
-                shopList = [];
-                if (reqBody.shoppingList != undefined && reqBody.shoppingList.length > 0) {
-                    for (let i = 0; i < reqBody.shoppingList.length; i++) {
-                        const elem = await ShoppingElementTrainerFood.create({
-                            title: reqBody.shoppingList[i].title,
-                            description: reqBody.shoppingList[i].description,
-                            trainerFood: food.id
-                        });
-                        shopList.push(elem);
-                    }
-                }
-                food.shoppingList = shopList;
-
-                res.status(200).json(food);
+                res.status(200).json(exercice);
                 return;
             } else {
                 res.status(400).send('BAD_INFORMATION');
                 return ;
             }
-        } else {
-            res.status(400).send('BAD_INFORMATION');
-            return ;
         }
-    }
-});
-app.post('/trainer/data/food/edit', async (req, res) => {
-    let userToken = req.headers.token;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
-
-    const reqBody = req.body;
-
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        if (reqBody.id != undefined &&
-            reqBody.title != undefined && reqBody.title.trim() != '' &&
-            reqBody.description != undefined && reqBody.description.trim() != '' && 
-            reqBody.onMonday != undefined && 
-            reqBody.onTuesday != undefined && 
-            reqBody.onWednesday != undefined && 
-            reqBody.onThursday != undefined && 
-            reqBody.onFriday != undefined && 
-            reqBody.onSaturday != undefined && 
-            reqBody.onSunday != undefined && 
-            reqBody.foodType != undefined && reqBody.foodType.trim() != '' && 
-            reqBody.amount != undefined && reqBody.amount.trim() != '') {
-
-            const foodType = await FoodType.findOne({where: {code: reqBody.foodType }});
-
-            if (foodType != undefined) {
-
-                let food = await TrainerFood.findOne({where: { id: reqBody.id }});
-
-                if (food != undefined) {
-                    food.title = reqBody.title;
-                    food.description = reqBody.description;
-                    food.amount = reqBody.amount;
-                    food.foodType = foodType.id;
-                    food.onMonday = reqBody.onMonday;
-                    food.onTuesday = reqBody.onTuesday;
-                    food.onWednesday = reqBody.onWednesday;
-                    food.onThursday = reqBody.onThursday;
-                    food.onFriday = reqBody.onFriday;
-                    food.onSaturday = reqBody.onSaturday;
-                    food.onSunday = reqBody.onSunday;
-
-                    food = await food.save();
-
-                    shopList = [];
-                    if (reqBody.shoppingList != undefined && reqBody.shoppingList.length > 0) {
-                        for (let i = 0; i < reqBody.shoppingList.length; i++) {
-                            if (reqBody.shoppingList[i].new != undefined && reqBody.shoppingList[i].new) {
-                                const elem = await ShoppingElementTrainerFood.create({
-                                    title: reqBody.shoppingList[i].title,
-                                    description: reqBody.shoppingList[i].description,
-                                    trainerFood: food.id
-                                });
-                                shopList.push(elem);
-                            } else {
-                                let elem = await ShoppingElementTrainerFood.findOne({where: {id: reqBody.shoppingList[i].id}});
-                                if (elem != undefined) {
-                                    if (reqBody.shoppingList[i].delete) {
-                                        await elem.destroy();
-                                    } else {
-                                        elem.title = reqBody.shoppingList[i].title;
-                                        elem.description = reqBody.shoppingList[i].description;
-                                        await elem.save();
-                                        shopList.push(elem);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    food.shoppingList = shopList;
-
-                    res.status(200).json(food);
-                    return;
-                } else {
-                    res.status(400).send('BAD_INFORMATION');
-                    return ;
-                }
-            } else {
-                res.status(400).send('BAD_INFORMATION');
-                return ;
-            }
-        } else {
-            res.status(400).send('BAD_INFORMATION');
-            return ;
-        }
-    }
-});
-app.post('/trainer/data/exercices/new', async (req, res) => {
-    let userToken = req.headers.token;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
-
-    const reqBody = req.body;
-
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        if (reqBody.title != undefined && reqBody.title.trim() != '' &&
-            reqBody.description != undefined && reqBody.description.trim() != '' && 
-            reqBody.observations != undefined && reqBody.observations.trim() != '' && 
-            reqBody.onMonday != undefined && 
-            reqBody.onTuesday != undefined && 
-            reqBody.onWednesday != undefined && 
-            reqBody.onThursday != undefined && 
-            reqBody.onFriday != undefined && 
-            reqBody.onSaturday != undefined && 
-            reqBody.onSunday != undefined && 
-            reqBody.repetitions != undefined && reqBody.repetitions.trim() != '' &&
-            reqBody.rest != undefined && reqBody.rest.trim() != '' &&
-            reqBody.series != undefined && reqBody.series.trim() != '') {
-
-            const exercice = await TrainerExercice.create({
-                title: reqBody.title,
-                description: reqBody.description,
-                observations: reqBody.observations,
-                repetitions: reqBody.repetitions,
-                rest: reqBody.rest,
-                series: reqBody.series,
-                onMonday: reqBody.onMonday,
-                onTuesday: reqBody.onTuesday,
-                onWednesday: reqBody.onWednesday,
-                onThursday: reqBody.onThursday,
-                onFriday: reqBody.onFriday,
-                onSaturday: reqBody.onSaturday,
-                onSunday: reqBody.onSunday,
-                trainer: searchUser.id
-            });
-
-            res.status(200).json(exercice);
-            return;
-        } else {
-            res.status(400).send('BAD_INFORMATION');
-            return ;
-        }
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
+        return ;
     }
 });
 app.post('/trainer/data/exercices/edit', async (req, res) => {
-    let userToken = req.headers.token;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
+    try {
+        let userToken = req.headers.token;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
 
-    const reqBody = req.body;
+        const reqBody = req.body;
 
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        if (reqBody.id != undefined && 
-            reqBody.title != undefined && reqBody.title.trim() != '' &&
-            reqBody.description != undefined && reqBody.description.trim() != '' && 
-            reqBody.observations != undefined && reqBody.observations.trim() != '' && 
-            reqBody.onMonday != undefined && 
-            reqBody.onTuesday != undefined && 
-            reqBody.onWednesday != undefined && 
-            reqBody.onThursday != undefined && 
-            reqBody.onFriday != undefined && 
-            reqBody.onSaturday != undefined && 
-            reqBody.onSunday != undefined && 
-            reqBody.repetitions != undefined && reqBody.repetitions.trim() != '' &&
-            reqBody.rest != undefined && reqBody.rest.trim() != '' &&
-            reqBody.series != undefined && reqBody.series.trim() != '') {
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            if (reqBody.id != undefined && 
+                reqBody.title != undefined && reqBody.title.trim() != '' &&
+                reqBody.description != undefined && reqBody.description.trim() != '' && 
+                reqBody.observations != undefined && reqBody.observations.trim() != '' && 
+                reqBody.onMonday != undefined && 
+                reqBody.onTuesday != undefined && 
+                reqBody.onWednesday != undefined && 
+                reqBody.onThursday != undefined && 
+                reqBody.onFriday != undefined && 
+                reqBody.onSaturday != undefined && 
+                reqBody.onSunday != undefined && 
+                reqBody.repetitions != undefined && reqBody.repetitions.trim() != '' &&
+                reqBody.rest != undefined && reqBody.rest.trim() != '' &&
+                reqBody.series != undefined && reqBody.series.trim() != '') {
 
-            let exercice = await TrainerExercice.findOne({where: { id: reqBody.id }});
+                let exercice = await TrainerExercice.findOne({where: { id: reqBody.id }});
 
-            if (exercice == undefined) {
+                if (exercice == undefined) {
+                    res.status(400).send('BAD_INFORMATION');
+                    return ;
+                } else {
+                    exercice.title = reqBody.title;
+                    exercice.description = reqBody.description;
+                    exercice.observations = reqBody.observations;
+                    exercice.repetitions = reqBody.repetitions;
+                    exercice.rest = reqBody.rest;
+                    exercice.series = reqBody.series;
+                    exercice.onMonday = reqBody.onMonday;
+                    exercice.onTuesday = reqBody.onTuesday;
+                    exercice.onWednesday = reqBody.onWednesday;
+                    exercice.onThursday = reqBody.onThursday;
+                    exercice.onFriday = reqBody.onFriday;
+                    exercice.onSaturday = reqBody.onSaturday;
+                    exercice.onSunday = reqBody.onSunday;
+
+                    await exercice.save();
+
+                    res.status(200).json(exercice);
+                    return;
+                }
+            } else {
                 res.status(400).send('BAD_INFORMATION');
                 return ;
-            } else {
-                exercice.title = reqBody.title;
-                exercice.description = reqBody.description;
-                exercice.observations = reqBody.observations;
-                exercice.repetitions = reqBody.repetitions;
-                exercice.rest = reqBody.rest;
-                exercice.series = reqBody.series;
-                exercice.onMonday = reqBody.onMonday;
-                exercice.onTuesday = reqBody.onTuesday;
-                exercice.onWednesday = reqBody.onWednesday;
-                exercice.onThursday = reqBody.onThursday;
-                exercice.onFriday = reqBody.onFriday;
-                exercice.onSaturday = reqBody.onSaturday;
-                exercice.onSunday = reqBody.onSunday;
-
-                await exercice.save();
-
-                res.status(200).json(exercice);
-                return;
             }
-        } else {
-            res.status(400).send('BAD_INFORMATION');
-            return ;
         }
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
+        return ;
     }
 });
 app.post('/trainer/profile', async (req, res) => {
-    let userToken = req.headers.token;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        let trainees = await Team.findAll({where: {trainer: searchUser.id}});
-        if (trainees == null || trainees == undefined) {
-            trainees = [];
+    try {
+        let userToken = req.headers.token;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            let trainees = await Team.findAll({where: {trainer: searchUser.id}});
+            if (trainees == null || trainees == undefined) {
+                trainees = [];
+            }
+            let plan = undefined;
+            if (searchUser.plan != null && searchUser.plan != undefined) {
+                plan = await Plan.findOne({where: {id: searchUser.plan}});
+            }
+            let myProfile = {
+                id: searchUser.id,
+                email: searchUser.email,
+                name: searchUser.name,
+                trainerCode: searchUser.trainerCode,
+                traineeNumber: trainees.length,
+                plan: plan
+            };
+            res.status(200).json(myProfile);
+            return;
         }
-        let plan = undefined;
-        if (searchUser.plan != null && searchUser.plan != undefined) {
-            plan = await Plan.findOne({where: {id: searchUser.plan}});
-        }
-        let myProfile = {
-            id: searchUser.id,
-            email: searchUser.email,
-            name: searchUser.name,
-            trainerCode: searchUser.trainerCode,
-            traineeNumber: trainees.length,
-            plan: plan
-        };
-        res.status(200).json(myProfile);
-        return;
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
+        return ;
     }
 });
 
 app.post('/trainee/exercices', async (req, res) => {
-    let userToken = req.headers.token;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        let exercices = await TraineeExercice.findAll({where: {trainee: searchUser.id}});
-        res.status(200).json(exercices);
+    try {
+        let userToken = req.headers.token;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            let exercices = await TraineeExercice.findAll({where: {trainee: searchUser.id}});
+            res.status(200).json(exercices);
+            return;
+        }
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
         return;
     }
 });
 app.post('/trainee/food', async (req, res) => {
-    let userToken = req.headers.token;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        let food = await TraineeFood.findAll({where: {trainee: searchUser.id}, include: [FoodType, ShoppingElementTraineeFood]});
-        res.status(200).json(food);
+    try {
+        let userToken = req.headers.token;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            let food = await TraineeFood.findAll({where: {trainee: searchUser.id}, include: [FoodType, ShoppingElementTraineeFood]});
+            res.status(200).json(food);
+            return;
+        }
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
         return;
     }
 });
 app.post('/trainee/food/shoppinglist', async (req, res) => {
-    let userToken = req.headers.token;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        let food = await TraineeFood.findAll({where: {trainee: searchUser.id}, include: [ShoppingElementTraineeFood]});
-        let result = [];
-        for (let i = 0; i < food.length; i++) {
-            result = result.concat(food[i].ShoppingElementTraineeFoods);
+    try {
+        let userToken = req.headers.token;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            let food = await TraineeFood.findAll({where: {trainee: searchUser.id}, include: [ShoppingElementTraineeFood]});
+            let result = [];
+            for (let i = 0; i < food.length; i++) {
+                result = result.concat(food[i].ShoppingElementTraineeFoods);
+            }
+            res.status(200).json(result);
+            return;
         }
-        res.status(200).json(result);
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
         return;
     }
 });
 app.post('/trainee/food/shoppinglist/:idShoppingListElement', async (req, res) => {
-    let userToken = req.headers.token;
-    let idShoppingListElement = req.params.idShoppingListElement;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const reqBody = req.body;
-    const searchUser = await User.findOne({where: {email: email }});
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
+    try {
+        let userToken = req.headers.token;
+        let idShoppingListElement = req.params.idShoppingListElement;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const reqBody = req.body;
+        const searchUser = await User.findOne({where: {email: email }});
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            let shoppingListElement = await ShoppingElementTraineeFood.findOne({where: {id: idShoppingListElement}});
+            if (shoppingListElement != undefined) {
+                if (reqBody.checked != undefined) {
+                    shoppingListElement.checked = reqBody.checked;
+                    shoppingListElement = await shoppingListElement.save();
+                    res.status(200).send(shoppingListElement);
+                    return;
+                } else {
+                    res.status(400).send('BAD_INFORMATION');
+                    return;
+                }
+            } else {
+                res.status(400).send('BAD_INFORMATION');
+                return;
+            }
+        }
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
         return;
-    } else {
-        let shoppingListElement = await ShoppingElementTraineeFood.findOne({where: {id: idShoppingListElement}});
-        if (shoppingListElement != undefined) {
-            if (reqBody.checked != undefined) {
-                shoppingListElement.checked = reqBody.checked;
-                shoppingListElement = await shoppingListElement.save();
-                res.status(200).send(shoppingListElement);
+    }
+});
+app.post('/trainee/history', async (req, res) => {
+    try {
+        let userToken = req.headers.token;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            let historicalData = await UserMeasuresHistory.findAll({where: {trainee: searchUser.id}, order: [['createdAt', 'DESC']]});
+            res.status(200).json(historicalData);
+            return;
+        }
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
+        return;
+    }
+});
+app.post('/trainee/history/new', async (req, res) => {
+    try {
+        let userToken = req.headers.token;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+        const reqBody = req.body;
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            if (reqBody.weight != undefined && 
+                reqBody.chest != undefined && 
+                reqBody.arm != undefined && 
+                reqBody.waist != undefined && 
+                reqBody.hip != undefined && 
+                reqBody.gluteus != undefined && 
+                reqBody.thigh != undefined) {
+                let historicalData = await UserMeasuresHistory.create({
+                    weightKg: reqBody.weight,
+                    chestCm: reqBody.chest,
+                    armCm: reqBody.arm,
+                    waistCm: reqBody.waist,
+                    hipCm: reqBody.hip,
+                    gluteusCm: reqBody.gluteus,
+                    thighCm: reqBody.thigh,
+                    trainee: searchUser.id
+                });
+                res.status(200).json(historicalData);
                 return;
             } else {
                 res.status(400).send('BAD_INFORMATION');
                 return;
             }
-        } else {
-            res.status(400).send('BAD_INFORMATION');
-            return;
         }
-    }
-});
-app.post('/trainee/history', async (req, res) => {
-    let userToken = req.headers.token;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
         return;
-    } else {
-        let historicalData = await UserMeasuresHistory.findAll({where: {trainee: searchUser.id}, order: [['createdAt', 'DESC']]});
-        res.status(200).json(historicalData);
-        return;
-    }
-});
-app.post('/trainee/history/new', async (req, res) => {
-    let userToken = req.headers.token;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
-    const reqBody = req.body;
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        if (reqBody.weight != undefined && 
-            reqBody.chest != undefined && 
-            reqBody.arm != undefined && 
-            reqBody.waist != undefined && 
-            reqBody.hip != undefined && 
-            reqBody.gluteus != undefined && 
-            reqBody.thigh != undefined) {
-            let historicalData = await UserMeasuresHistory.create({
-                weightKg: reqBody.weight,
-                chestCm: reqBody.chest,
-                armCm: reqBody.arm,
-                waistCm: reqBody.waist,
-                hipCm: reqBody.hip,
-                gluteusCm: reqBody.gluteus,
-                thighCm: reqBody.thigh,
-                trainee: searchUser.id
-            });
-            res.status(200).json(historicalData);
-            return;
-        } else {
-            res.status(400).send('BAD_INFORMATION');
-            return;
-        }
     }
 });
 app.post('/trainee/profile', async (req, res) => {
-    let userToken = req.headers.token;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        let profile = await User.findOne({where: {id: searchUser.id}, attributes: {exclude: ['password', 'recoverPasswordCode', 'recoverPasswordCodeDate', 'active']}, raw: true});
-        let trainers = await Team.findAll({where: {trainee: searchUser.id}});
-        let trainer = undefined;
-        if (trainers != undefined && trainers.length == 1) {
-            trainer = await User.findOne({where: {id: trainers[0].trainer}, attributes: {exclude: ['password', 'recoverPasswordCode', 'recoverPasswordCodeDate', 'active']}, raw: true});
+    try {
+        let userToken = req.headers.token;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            let profile = await User.findOne({where: {id: searchUser.id}, attributes: {exclude: ['password', 'recoverPasswordCode', 'recoverPasswordCodeDate', 'active']}, raw: true});
+            let trainers = await Team.findAll({where: {trainee: searchUser.id}});
+            let trainer = undefined;
+            if (trainers != undefined && trainers.length == 1) {
+                trainer = await User.findOne({where: {id: trainers[0].trainer}, attributes: {exclude: ['password', 'recoverPasswordCode', 'recoverPasswordCodeDate', 'active']}, raw: true});
+            }
+            profile.trainer = trainer;
+            res.status(200).json(profile);
+            return;
         }
-        profile.trainer = trainer;
-        res.status(200).json(profile);
+    } catch (error) {
+        res.status(400).send('INTERNAL_ERROR');
         return;
     }
 });
 app.post('/trainee/profile/edit', async (req, res) => {
-    let userToken = req.headers.token;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
-    const reqBody = req.body;
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        if (reqBody.name != undefined && reqBody.name.trim() != '' && 
-            reqBody.sex != undefined && reqBody.sex.trim() != '' && 
-            reqBody.goal != undefined && reqBody.goal.trim() != '' && 
-            reqBody.goalFull != undefined && reqBody.goalFull.trim() != '' && 
-            reqBody.height != undefined && 
-            reqBody.weight != undefined
-        ) {
-            let profile = await User.findOne({where: {id: searchUser.id}, attributes: {exclude: ['password', 'recoverPasswordCode', 'recoverPasswordCodeDate', 'active']}});
-            profile.name = reqBody.name;
-            profile.sex = reqBody.sex;
-            profile.goal = reqBody.goal;
-            profile.goalFull = reqBody.goalFull;
-            profile.height = reqBody.height;
-            profile.weight = reqBody.weight;
-
-            await profile.save();
-
-            res.status(200).json(profile);
+    try {
+        let userToken = req.headers.token;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+        const reqBody = req.body;
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
             return;
         } else {
-            res.status(400).json("BAD_REQUEST");
-            return ;
+            if (reqBody.name != undefined && reqBody.name.trim() != '' && 
+                reqBody.sex != undefined && reqBody.sex.trim() != '' && 
+                reqBody.goal != undefined && reqBody.goal.trim() != '' && 
+                reqBody.goalFull != undefined && reqBody.goalFull.trim() != '' && 
+                reqBody.height != undefined && 
+                reqBody.weight != undefined
+            ) {
+                let profile = await User.findOne({where: {id: searchUser.id}, attributes: {exclude: ['password', 'recoverPasswordCode', 'recoverPasswordCodeDate', 'active']}});
+                profile.name = reqBody.name;
+                profile.sex = reqBody.sex;
+                profile.goal = reqBody.goal;
+                profile.goalFull = reqBody.goalFull;
+                profile.height = reqBody.height;
+                profile.weight = reqBody.weight;
+
+                await profile.save();
+
+                res.status(200).json(profile);
+                return;
+            } else {
+                res.status(400).json("BAD_REQUEST");
+                return ;
+            }
         }
+    } catch (error) {
+        res.status(400).json("INTERNAL_ERROR");
+        return ;
     }
 });
 app.post('/trainee/profile/updateCode', async (req, res) => {
-    let userToken = req.headers.token;
-    const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
-    const email = tokenDecoded.email;
-    const searchUser = await User.findOne({where: {email: email }});
-    const reqBody = req.body;
-    if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
-        res.status(400).send('TOKEN_NOT_VALID');
-        return;
-    } else {
-        if (reqBody.code != undefined && reqBody.code.trim() != '') {
-
-            let newTrainer = await User.findOne({where: { trainerCode: reqBody.code }});
-            if (newTrainer == undefined) {
-                res.status(400).send("TRAINER_CODE_NOT_EXISTS");
-                return;
-            }
-            await TraineeExercice.destroy({where: {trainee: searchUser.id}});
-            await TraineeFood.destroy({where: {trainee: searchUser.id}});
-            await Team.destroy({where: {trainee: searchUser.id}});
-
-            if (newTrainer != undefined) {
-                // It is a trainee so match it with his trainer
-                await Team.create({
-                    trainer: newTrainer.id,
-                    trainee: searchUser.id
-                });
-            }
-
-            res.status(200).json("DELETED");
+    try {
+        let userToken = req.headers.token;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+        const reqBody = req.body;
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
             return;
         } else {
-            res.status(400).json("BAD_REQUEST");
-            return ;
+            if (reqBody.code != undefined && reqBody.code.trim() != '') {
+
+                let newTrainer = await User.findOne({where: { trainerCode: reqBody.code }});
+                if (newTrainer == undefined) {
+                    res.status(400).send("TRAINER_CODE_NOT_EXISTS");
+                    return;
+                }
+                await TraineeExercice.destroy({where: {trainee: searchUser.id}});
+                await TraineeFood.destroy({where: {trainee: searchUser.id}});
+                await Team.destroy({where: {trainee: searchUser.id}});
+
+                if (newTrainer != undefined) {
+                    // It is a trainee so match it with his trainer
+                    await Team.create({
+                        trainer: newTrainer.id,
+                        trainee: searchUser.id
+                    });
+                }
+
+                res.status(200).json("DELETED");
+                return;
+            } else {
+                res.status(400).json("BAD_REQUEST");
+                return ;
+            }
         }
+    } catch (error) {
+        res.status(400).json("INTERNAL_ERROR");
+        return ;
     }
 });
 

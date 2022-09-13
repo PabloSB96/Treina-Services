@@ -216,7 +216,7 @@ INSERT INTO treina_food_type(id, code, title) VALUES (4, 'merienda', 'Merienda')
 INSERT INTO treina_food_type(id, code, title) VALUES (5, 'cena', 'Cena');
 INSERT INTO treina_food_type(id, code, title) VALUES (6, 'suplemento', 'Suplemento');
 
-INSERT INTO treina_plan(id, code, title, description, cost_month, cost_year) VALUES (1, 'basico', 'Básico', 'Plan básico inicial', 5.99, 50.99);
-INSERT INTO treina_plan(id, code, title, description, cost_month, cost_year) VALUES (2, 'medium', 'Medium', 'Plan medio inicial', 10.99, 100.99);
-INSERT INTO treina_plan(id, code, title, description, cost_month, cost_year) VALUES (3, 'premium', 'Premium', 'Plan completo inicial de la plataforma.', 15.99, 150.99);
+INSERT INTO treina_plan(id, code, title, description, cost_month, cost_year) VALUES (1, 'basico', 'Básico', 'Plan básico inicial', 10.00, 0.00);
+INSERT INTO treina_plan(id, code, title, description, cost_month, cost_year) VALUES (2, 'premium', 'Premium', 'Plan medio inicial', 15.00, 0.00);
+INSERT INTO treina_plan(id, code, title, description, cost_month, cost_year) VALUES (3, 'empresarial', 'Empresarial', 'Plan completo inicial de la plataforma.', 30.00, 0.00);
 COMMIT;
