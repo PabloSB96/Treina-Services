@@ -451,6 +451,41 @@ app.post('/forgotpassword/newpassword', async (req, res) => {
         return ;
     }
 });
+app.post('/account/delete', async (req, res) => {
+    try {
+        let userToken = req.headers.token;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+        const reqBody = req.body;
+        if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            res.status(400).send('TOKEN_NOT_VALID');
+            return;
+        } else {
+            if (searchUser.isTrainer) {
+                await TrainerExercice.destroy({where: {trainer: searchUser.id}});
+                await TrainerFood.destroy({where: {trainer: searchUser.id}});
+                await Team.destroy({where: {trainer: searchUser.id}});
+                await User.destroy({where: {id: searchUser.id}});
+
+                res.status(200).send("DELETED");
+                return;
+            } else {
+                await UserMeasuresHistory.destroy({where: {trainee: searchUser.id}});
+                await TraineeExercice.destroy({where: {trainee: searchUser.id}});
+                await TraineeFood.destroy({where: {trainee: searchUser.id}});
+                await Team.destroy({where: {trainee: searchUser.id}});
+                await User.destroy({where: {id: searchUser.id}});
+
+                res.status(200).send("DELETED");
+                return;
+            }
+        }
+    } catch (error) {
+        res.status(400).json("INTERNAL_ERROR");
+        return ;
+    }
+});
 
 app.post('/trainer/trainees', async (req, res) => {
     try {

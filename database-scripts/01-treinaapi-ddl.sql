@@ -190,7 +190,7 @@ CREATE TABLE IF NOT EXISTS treina_shopping_element_trainer_food (
     description VARCHAR(2000) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     trainer_food_id BIGINT NOT NULL,
-    FOREIGN KEY (trainer_food_id) REFERENCES treina_trainer_food(id)
+    FOREIGN KEY (trainer_food_id) REFERENCES treina_trainer_food(id) ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS treina_shopping_element_trainee_food (
 	id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -207,7 +207,7 @@ COMMIT;
 -- ----------------------------
 -- ADDING DATA TO TABLES
 -- ----------------------------
-INSERT INTO treina_config(id, name, value) VALUES (1, 'app.currentVersion', '1.0.0-rc0');
+INSERT INTO treina_config(id, name, value) VALUES (1, 'app.currentVersion', '1.0.0');
 
 INSERT INTO treina_food_type(id, code, title) VALUES (1, 'desayuno', 'Desayuno');
 INSERT INTO treina_food_type(id, code, title) VALUES (2, 'almuerzo', 'Almuerzo');
