@@ -25,7 +25,8 @@ app.use(bodyParser.json());
 // Sequelize: connect to database
 const sequelize = new Sequelize('treinaapi', 'root', 'password12345678', {
     host: 'localhost',
-    dialect: 'mysql'
+    dialect: 'mysql',
+    logging: false
 });
 
 // Define models
