@@ -194,6 +194,18 @@ let updateToken = async (userToken) => {
     return token;
 }
 
+let updateTokenLogin = async (email) => {
+    const searchUser = await User.findOne({where: {email: email }});
+    const token = jwt.sign(
+        {email },
+        process.env.TOKEN_KEY,
+        {expiresIn: '72h' }
+    );
+    searchUser.token = token;
+    await searchUser.save();
+    return token;
+}
+
 let sendEmail = async (to, subject, text) => {
     var transporter = nodemailer.createTransport({
         service: 'gmail',
@@ -370,7 +382,7 @@ app.post('/login', async (req, res) => {
                 if (await bcrypt.compare(password, searchUser.password)) {
                     let result = new Object();
                     result.email = email;
-                    result.token = await updateToken(searchUser.token);
+                    result.token = await updateTokenLogin(searchUser.token);
                     result.name = searchUser.name;
                     res.status(200).json(result);
                 } else {
