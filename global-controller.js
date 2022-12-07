@@ -195,7 +195,9 @@ let updateToken = async (userToken) => {
 }
 
 let updateTokenLogin = async (email) => {
-    const searchUser = await User.findOne({where: {email: email }});
+
+    const searchUser = await User.findOne({ where: {email: email }});
+    
     const token = jwt.sign(
         {email },
         process.env.TOKEN_KEY,
@@ -382,7 +384,7 @@ app.post('/login', async (req, res) => {
                 if (await bcrypt.compare(password, searchUser.password)) {
                     let result = new Object();
                     result.email = email;
-                    result.token = await updateTokenLogin(searchUser.token);
+                    result.token = await updateTokenLogin(email);
                     result.name = searchUser.name;
                     res.status(200).json(result);
                 } else {
@@ -397,6 +399,9 @@ app.post('/login', async (req, res) => {
             res.status(400).send({'message': 'USER_NOT_EXISTS'});
         }
     } catch (error) {
+        console.log("login: error: 1");
+        console.log(error);
+        console.log("login: error: 2");
         res.status(400).send({'message': 'INTERNAL_ERROR'});
         return ;
     }
