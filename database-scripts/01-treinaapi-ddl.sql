@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS treina_user (
     current_goal_full VARCHAR(2000),
     device_id VARCHAR(500),
     plan_id BIGINT,
+    plan_revenuecat_obj VARCHAR(2000),
     recover_password_code VARCHAR(50),
     recover_password_code_date TIMESTAMP,
     active BOOLEAN DEFAULT TRUE,
@@ -216,7 +217,10 @@ INSERT INTO treina_food_type(id, code, title) VALUES (4, 'merienda', 'Merienda')
 INSERT INTO treina_food_type(id, code, title) VALUES (5, 'cena', 'Cena');
 INSERT INTO treina_food_type(id, code, title) VALUES (6, 'suplemento', 'Suplemento');
 
-INSERT INTO treina_plan(id, code, title, description, cost_month, cost_year) VALUES (1, 'basico', 'Básico', 'Plan básico inicial', 10.00, 0.00);
-INSERT INTO treina_plan(id, code, title, description, cost_month, cost_year) VALUES (2, 'premium', 'Premium', 'Plan medio inicial', 15.00, 0.00);
-INSERT INTO treina_plan(id, code, title, description, cost_month, cost_year) VALUES (3, 'empresarial', 'Empresarial', 'Plan completo inicial de la plataforma.', 30.00, 0.00);
+INSERT INTO treina_plan(id, code, title, description, cost_month, cost_year) VALUES (1, 'treina_10_1m_0w0', 'Básico (mensual)', 'Plan básico mensual inicial.', 10.00, 0.00);
+INSERT INTO treina_plan(id, code, title, description, cost_month, cost_year) VALUES (2, 'treina_15_1m_0w0', 'Premium (mensual)', 'Plan medio mensual inicial.', 15.00, 0.00);
+INSERT INTO treina_plan(id, code, title, description, cost_month, cost_year) VALUES (3, 'treina_30_1m_0w0', 'Empresarial (mensual)', 'Plan completo mensual inicial.', 30.00, 0.00);
+INSERT INTO treina_plan(id, code, title, description, cost_month, cost_year) VALUES (4, 'treina_100_1y_0w0', 'Básico (anual)', 'Plan básico anual inicial.', 100.00, 0.00);
+INSERT INTO treina_plan(id, code, title, description, cost_month, cost_year) VALUES (5, 'treina_150_1y_0w0', 'Premium (anual)', 'Plan medio anual inicial.', 150.00, 0.00);
+INSERT INTO treina_plan(id, code, title, description, cost_month, cost_year) VALUES (6, 'treina_301_1y_0w0', 'Empresarial (anual)', 'Plan completo anual inicial.', 300.00, 0.00);
 COMMIT;

@@ -60,6 +60,7 @@ const User = sequelize.define('User', {
     token: {type: DataTypes.STRING, allowNull: false},
     deviceId: {type: DataTypes.STRING, allowNull: false, field: 'device_id'},
     plan: {type: Plan, field: 'plan_id'},
+    planRevenuecatObj: {type: DataTypes.STRING, field: 'plan_revenuecat_obj'},
     recoverPasswordCode: {type: DataTypes.STRING, field: 'recover_password_code'},
     recoverPasswordCodeDate: {type: DataTypes.DATE, field: 'recover_password_code_date'},
     active: {type: DataTypes.BOOLEAN},
@@ -352,12 +353,12 @@ app.post('/register', async (req, res) => {
                         return;
                     }
 
-                    if (registerBody.isTrainer) {
+                    /*if (registerBody.isTrainer) {
                         sendEmail(
                             registerBody.email.toLowerCase(), 
                             'Registro completado', 
                             'Se ha completado tu registro como entrenador correctamente. Para poder iniciar sesión debemos activar tu cuenta, y para ello debes solicitarnos un plan en nuestra web: www.treina.app con este mismo email. En caso de cualquier duda o problema no dudes en contactarnos en treina.ayuda@gmail.com.');
-                    }
+                    }*/
 
                     res.status(200).json(user);
                     return;
@@ -371,6 +372,70 @@ app.post('/register', async (req, res) => {
         return;
     }
 });
+
+app.post('/registerPlan', async (req, res) => {
+    try {
+        const registerBody = req.body;
+        const searchUser = await User.findOne({where: { email: registerBody.email }});
+        if (searchUser == undefined || !searchUser.isTrainer) {
+            res.status(400).send({'message': 'BAD_REQUEST'});
+        } else {
+            if (registerBody.revenuecat != undefined && registerBody.revenuecat.trim()) {
+                /*
+                Object {
+                    "identifier": "Monthly_Basico",
+                    "offeringIdentifier": "default",
+                    "packageType": "CUSTOM",
+                    "product": Object {
+                        "currencyCode": "EUR",
+                        "description": "",
+                        "discounts": null,
+                        "identifier": "treina_10_1m_0w0",
+                        "introPrice": null,
+                        "price": 11.99,
+                        "priceString": "11,99 €",
+                        "productCategory": "SUBSCRIPTION",
+                        "productType": "AUTO_RENEWABLE_SUBSCRIPTION",
+                        "subscriptionPeriod": "P1M",
+                        "title": "Plan Básico (mensual) (Treina)",
+                    },
+                }
+                */
+                if (revenuecat.product != undefined && revenuecat.product.identifier != undefined) {
+                    const plan = await Plan.findOne({where: {code: revenuecat.product.identifier }});
+                    if (plan == undefined || plan == null) {
+                        res.status(400).send({'message': 'PRODUCT_INCORRECT'});
+                        return;
+                    }
+
+                    searchUser.planRevenuecatObj = JSON.stringify(revenuecat);
+                    searchUser.active = true;
+                    searchUser.plan = plan;
+                    await searchUser.save();
+
+                    sendEmail(reqBody.email, 'Activación de cuenta', 'Su cuenta: ' + searchUser.email + ' como entrenador ha sido activada correctamente con el siguiente plan:\nNombre del plan: ' + revenuecat.product.title + '\nPrecio: ' + revenuecat.product.priceString);
+
+                    res.status(200).json(user);
+                    return;
+                } else {
+                    res.status(400).send({'message': 'PRODUCT_INCORRECT'});
+                    return;
+                }
+                
+            } else {
+                res.status(400).send({'message': 'BAD_REQUEST'});
+                return;
+            }
+        }
+    } catch(error){
+        console.log("registerPlan: error: 1");
+        console.log(error);
+        console.log("registerPlan: error: 2");
+        res.status(400).send({'message': 'INTERNAL_ERROR'});
+        return ;
+    }
+});
+
 app.post('/login', async (req, res) => {
     try {
         const registerBody = req.body;
@@ -386,6 +451,11 @@ app.post('/login', async (req, res) => {
                     result.email = email;
                     result.token = await updateTokenLogin(email);
                     result.name = searchUser.name;
+
+                    /*if (searchUser.isTrainer) {
+                        if (searchUser.customerInfo != undefined && searchUser.customerInfo.)
+                    }*/
+
                     res.status(200).json(result);
                 } else {
                     let message  = 'PASSWORD_INCORRECT';
