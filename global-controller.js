@@ -61,6 +61,7 @@ const User = sequelize.define('User', {
     deviceId: {type: DataTypes.STRING, allowNull: false, field: 'device_id'},
     plan: {type: Plan, field: 'plan_id'},
     planRevenuecatObj: {type: DataTypes.STRING, field: 'plan_revenuecat_obj'},
+    planPurchasedDate: {type: DataTypes.DATE, field: 'plan_purchased_date'},
     recoverPasswordCode: {type: DataTypes.STRING, field: 'recover_password_code'},
     recoverPasswordCodeDate: {type: DataTypes.DATE, field: 'recover_password_code_date'},
     active: {type: DataTypes.BOOLEAN},
@@ -380,7 +381,7 @@ app.post('/registerPlan', async (req, res) => {
         if (searchUser == undefined || !searchUser.isTrainer) {
             res.status(400).send({'message': 'BAD_REQUEST'});
         } else {
-            if (registerBody.revenuecat != undefined && registerBody.revenuecat.trim()) {
+            if (registerBody.revenuecat != undefined) {
                 /*
                 Object {
                     "identifier": "Monthly_Basico",
@@ -401,21 +402,22 @@ app.post('/registerPlan', async (req, res) => {
                     },
                 }
                 */
-                if (revenuecat.product != undefined && revenuecat.product.identifier != undefined) {
-                    const plan = await Plan.findOne({where: {code: revenuecat.product.identifier }});
+                if (registerBody.revenuecat.product != undefined && registerBody.revenuecat.product.identifier != undefined) {
+                    const plan = await Plan.findOne({where: {code: registerBody.revenuecat.product.identifier }, raw: true});
                     if (plan == undefined || plan == null) {
                         res.status(400).send({'message': 'PRODUCT_INCORRECT'});
                         return;
                     }
 
-                    searchUser.planRevenuecatObj = JSON.stringify(revenuecat);
+                    searchUser.planRevenuecatObj = JSON.stringify(registerBody.revenuecat);
+                    searchUser.planPurchasedDate = (new Date()).getTime();
                     searchUser.active = true;
-                    searchUser.plan = plan;
+                    searchUser.plan = plan.id;
                     await searchUser.save();
 
-                    sendEmail(reqBody.email, 'Activación de cuenta', 'Su cuenta: ' + searchUser.email + ' como entrenador ha sido activada correctamente con el siguiente plan:\nNombre del plan: ' + revenuecat.product.title + '\nPrecio: ' + revenuecat.product.priceString);
+                    sendEmail(reqBody.email, 'Activación de cuenta', 'Su cuenta: ' + searchUser.email + ' como entrenador ha sido activada correctamente con el siguiente plan:\nNombre del plan: ' + registerBody.revenuecat.product.title + '\nPrecio: ' + registerBody.revenuecat.product.priceString);
 
-                    res.status(200).json(user);
+                    res.status(200).json(searchUser);
                     return;
                 } else {
                     res.status(400).send({'message': 'PRODUCT_INCORRECT'});
