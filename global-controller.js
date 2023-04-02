@@ -67,6 +67,13 @@ const User = sequelize.define('User', {
     active: {type: DataTypes.BOOLEAN},
     createdAt: {type: DataTypes.DATE, allowNull: true, field: 'created_at'}
 }, {tableName: 'treina_user', timestamps: false});
+const PurchaseError = sequelize.define('PurchaseError', {
+    id: {type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true},
+    planRevenuecatObj: {type: DataTypes.STRING, field: 'plan_revenuecat_obj'},
+    message: {type: DataTypes.STRING, field: 'message'},
+    user: {type: User, field: 'user_id'},
+    createdAt: {type: DataTypes.DATE, allowNull: true, field: 'created_at'}
+}, {tableName: 'treina_purchase_error', timestamps: false});
 const Team = sequelize.define('Team', {
     id: {type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true},
     trainer: {type: User, field: 'trainer_id'},
@@ -415,7 +422,7 @@ app.post('/registerPlan', async (req, res) => {
                     searchUser.plan = plan.id;
                     await searchUser.save();
 
-                    sendEmail(reqBody.email, 'Activación de cuenta', 'Su cuenta: ' + searchUser.email + ' como entrenador ha sido activada correctamente con el siguiente plan:\nNombre del plan: ' + registerBody.revenuecat.product.title + '\nPrecio: ' + registerBody.revenuecat.product.priceString);
+                    sendEmail(searchUser.email, 'Activación de cuenta', 'Su cuenta: ' + searchUser.email + ' como entrenador ha sido activada correctamente con el siguiente plan:\nNombre del plan: ' + registerBody.revenuecat.product.title + '\nPrecio: ' + registerBody.revenuecat.product.priceString);
 
                     res.status(200).json(searchUser);
                     return;
@@ -433,6 +440,37 @@ app.post('/registerPlan', async (req, res) => {
         console.log("registerPlan: error: 1");
         console.log(error);
         console.log("registerPlan: error: 2");
+        res.status(400).send({'message': 'INTERNAL_ERROR'});
+        return ;
+    }
+});
+
+app.post('/registerPurchaseError', async (req, res) => {
+    try {
+        const registerBody = req.body;
+        const searchUser = await User.findOne({where: { email: registerBody.email }});
+        if (searchUser == undefined || !searchUser.isTrainer) {
+            res.status(400).send({'message': 'BAD_REQUEST'});
+        } else {
+            if (registerBody.message != undefined && registerBody.revenuecat != undefined) {
+
+                const purchaseError = await PurchaseError.create({
+                    planRevenuecatObj: JSON.stringify(registerBody.revenuecat),
+                    message: registerBody.message,
+                    user: searchUser.id
+                });
+
+                res.status(200).json(purchaseError);
+                return;
+            } else {
+                res.status(400).send({'message': 'BAD_REQUEST'});
+                return;
+            }
+        }
+    } catch(error){
+        console.log("registerPurchaseError: error: 1");
+        console.log(error);
+        console.log("registerPurchaseError: error: 2");
         res.status(400).send({'message': 'INTERNAL_ERROR'});
         return ;
     }

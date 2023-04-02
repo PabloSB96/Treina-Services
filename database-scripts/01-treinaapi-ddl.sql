@@ -16,6 +16,7 @@ DROP TABLE IF EXISTS treina_default_food;
 DROP TABLE IF EXISTS treina_food_type;
 DROP TABLE IF EXISTS treina_user_measures_history;
 DROP TABLE IF EXISTS treina_user_measures;
+DROP TABLE IF EXISTS treina_purchase_error;
 DROP TABLE IF EXISTS treina_user;
 DROP TABLE IF EXISTS treina_plan;
 DROP TABLE IF EXISTS treina_config;
@@ -62,6 +63,14 @@ CREATE TABLE IF NOT EXISTS treina_user (
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (plan_id) REFERENCES treina_plan(id)
+);
+CREATE TABLE IF NOT EXISTS treina_purchase_error (
+	id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    plan_revenuecat_obj VARCHAR(2000),
+    message VARCHAR(2000),
+    user_id BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES treina_user(id)
 );
 CREATE TABLE IF NOT EXISTS treina_user_measures_history (
 	id BIGINT AUTO_INCREMENT PRIMARY KEY,
