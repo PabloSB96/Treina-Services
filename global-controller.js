@@ -381,7 +381,7 @@ app.post('/register', async (req, res) => {
     }
 });
 
-app.post('/registerPlan', async (req, res) => {
+app.post('/plan/register', async (req, res) => {
     try {
         const registerBody = req.body;
         const searchUser = await User.findOne({where: { email: registerBody.email }});
@@ -437,9 +437,67 @@ app.post('/registerPlan', async (req, res) => {
             }
         }
     } catch(error){
-        console.log("registerPlan: error: 1");
+        console.log("plan/register: error: 1");
         console.log(error);
-        console.log("registerPlan: error: 2");
+        console.log("plan/register: error: 2");
+        res.status(400).send({'message': 'INTERNAL_ERROR'});
+        return ;
+    }
+});
+app.post('/plan/remove', async (req, res) => {
+    try {
+        const registerBody = req.body;
+        const searchUser = await User.findOne({where: { email: registerBody.email }});
+        if (searchUser == undefined || !searchUser.isTrainer) {
+            res.status(400).send({'message': 'BAD_REQUEST'});
+        } else {
+            searchUser.planRevenuecatObj = null;
+            searchUser.planPurchasedDate = (new Date()).getTime();
+            searchUser.active = false;
+            searchUser.plan = null;
+            await searchUser.save();
+
+            sendEmail(searchUser.email, 'Todavía no tienes una suscripción activa', 'Hemos detectado que tu cuenta: ' + searchUser.email + ' como entrenador no tiene actulamente ningún plan asignado. Recuerda que a través de la app puedes volver a suscribirte. ¡Estaremos encantados de tenerte de nuevo por Treina!\n\nEn caso de que estés teniendo algún problema al acceder a la app, recuerda que nos puedes contactar en: treina.ayuda@gmail.com');
+
+            res.status(200).json(searchUser);
+            return;
+        }
+    } catch(error){
+        console.log("plan/remove: error: 1");
+        console.log(error);
+        console.log("plan/remove: error: 2");
+        res.status(400).send({'message': 'INTERNAL_ERROR'});
+        return ;
+    }
+});
+app.post('/plan/activate', async (req, res) => {
+    // This service is used when in the login the user has a plan activated,
+    // but for some reason it was not previously registered on the backend correctly.
+    try {
+        const registerBody = req.body;
+        const searchUser = await User.findOne({where: { email: registerBody.email }});
+        if (searchUser == undefined || !searchUser.isTrainer) {
+            res.status(400).send({'message': 'BAD_REQUEST'});
+        } else {
+            searchUser.active = true;
+            await searchUser.save();
+
+            let result = new Object();
+            result.email = registerBody.email;
+            result.token = await updateTokenLogin(registerBody.email);
+            result.name = searchUser.name;
+
+            /*if (searchUser.isTrainer) {
+                if (searchUser.customerInfo != undefined && searchUser.customerInfo.)
+            }*/
+
+            res.status(200).json(result);
+            return;
+        }
+    } catch(error){
+        console.log("plan/activate: error: 1");
+        console.log(error);
+        console.log("plan/activate: error: 2");
         res.status(400).send({'message': 'INTERNAL_ERROR'});
         return ;
     }
