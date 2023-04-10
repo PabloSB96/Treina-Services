@@ -235,13 +235,13 @@ let sendEmail = async (to, subject, text) => {
       
     transporter.sendMail(mailOptions, function(error, info){
         if (error) {
-          console.log(error);
+          //console.log(error);
         }
     });
       
 }
 
-app.post('/config', async (req, res) => {
+app.post('/treina-services/config', async (req, res) => {
     try {
         const reqBody = req.body;
         if (reqBody.appVersion != undefined && reqBody.appVersion.trim() != '') {
@@ -263,7 +263,7 @@ app.post('/config', async (req, res) => {
     }
 });
 
-app.post('/register', async (req, res) => {
+app.post('/treina-services/register', async (req, res) => {
     try {
         // Register the new user here
         const registerBody = req.body;
@@ -381,7 +381,7 @@ app.post('/register', async (req, res) => {
     }
 });
 
-app.post('/plan/register', async (req, res) => {
+app.post('/treina-services/plan/register', async (req, res) => {
     try {
         const registerBody = req.body;
         const searchUser = await User.findOne({where: { email: registerBody.email }});
@@ -437,14 +437,11 @@ app.post('/plan/register', async (req, res) => {
             }
         }
     } catch(error){
-        console.log("plan/register: error: 1");
-        console.log(error);
-        console.log("plan/register: error: 2");
         res.status(400).send({'message': 'INTERNAL_ERROR'});
         return ;
     }
 });
-app.post('/plan/remove', async (req, res) => {
+app.post('/treina-services/plan/remove', async (req, res) => {
     try {
         const registerBody = req.body;
         const searchUser = await User.findOne({where: { email: registerBody.email }});
@@ -463,14 +460,11 @@ app.post('/plan/remove', async (req, res) => {
             return;
         }
     } catch(error){
-        console.log("plan/remove: error: 1");
-        console.log(error);
-        console.log("plan/remove: error: 2");
         res.status(400).send({'message': 'INTERNAL_ERROR'});
         return ;
     }
 });
-app.post('/plan/activate', async (req, res) => {
+app.post('/treina-services/plan/activate', async (req, res) => {
     // This service is used when in the login the user has a plan activated,
     // but for some reason it was not previously registered on the backend correctly.
     try {
@@ -495,15 +489,12 @@ app.post('/plan/activate', async (req, res) => {
             return;
         }
     } catch(error){
-        console.log("plan/activate: error: 1");
-        console.log(error);
-        console.log("plan/activate: error: 2");
         res.status(400).send({'message': 'INTERNAL_ERROR'});
         return ;
     }
 });
 
-app.post('/registerPurchaseError', async (req, res) => {
+app.post('/treina-services/registerPurchaseError', async (req, res) => {
     try {
         const registerBody = req.body;
         const searchUser = await User.findOne({where: { email: registerBody.email }});
@@ -526,15 +517,12 @@ app.post('/registerPurchaseError', async (req, res) => {
             }
         }
     } catch(error){
-        console.log("registerPurchaseError: error: 1");
-        console.log(error);
-        console.log("registerPurchaseError: error: 2");
         res.status(400).send({'message': 'INTERNAL_ERROR'});
         return ;
     }
 });
 
-app.post('/login', async (req, res) => {
+app.post('/treina-services/login', async (req, res) => {
     try {
         const registerBody = req.body;
         const email = registerBody.email;
@@ -567,14 +555,11 @@ app.post('/login', async (req, res) => {
             res.status(400).send({'message': 'USER_NOT_EXISTS'});
         }
     } catch (error) {
-        console.log("login: error: 1");
-        console.log(error);
-        console.log("login: error: 2");
         res.status(400).send({'message': 'INTERNAL_ERROR'});
         return ;
     }
 });
-app.post('/forgotpassword/code', async (req, res) => {
+app.post('/treina-services/forgotpassword/code', async (req, res) => {
     try {
         const reqBody = req.body;
         if (reqBody.email != undefined && reqBody.email.trim() != '') {
@@ -602,7 +587,7 @@ app.post('/forgotpassword/code', async (req, res) => {
         return ;
     }
 });
-app.post('/forgotpassword/newpassword', async (req, res) => {
+app.post('/treina-services/forgotpassword/newpassword', async (req, res) => {
     try {
         const reqBody = req.body;
         if (reqBody.email != undefined && reqBody.email.trim() != '' && 
@@ -637,7 +622,7 @@ app.post('/forgotpassword/newpassword', async (req, res) => {
         return ;
     }
 });
-app.post('/account/delete', async (req, res) => {
+app.post('/treina-services/account/delete', async (req, res) => {
     try {
         let userToken = req.headers.token;
         const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
@@ -673,7 +658,7 @@ app.post('/account/delete', async (req, res) => {
     }
 });
 
-app.post('/trainer/trainees', async (req, res) => {
+app.post('/treina-services/trainer/trainees', async (req, res) => {
     try {
         let userToken = req.headers.token;
         const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
@@ -706,7 +691,7 @@ app.post('/trainer/trainees', async (req, res) => {
         return ;
     }
 });
-app.post('/trainer/trainees/delete', async (req, res) => {
+app.post('/treina-services/trainer/trainees/delete', async (req, res) => {
     try {
         let userToken = req.headers.token;
         const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
@@ -743,7 +728,7 @@ app.post('/trainer/trainees/delete', async (req, res) => {
         return;
     }
 });
-app.post('/trainer/trainees/:traineeId/profile', async (req, res) => {
+app.post('/treina-services/trainer/trainees/:traineeId/profile', async (req, res) => {
     try {
         let userToken = req.headers.token;
         let traineeId = req.params.traineeId;
@@ -763,7 +748,7 @@ app.post('/trainer/trainees/:traineeId/profile', async (req, res) => {
         return;
     }
 });
-app.post('/trainer/trainees/:traineeId/history', async (req, res) => {
+app.post('/treina-services/trainer/trainees/:traineeId/history', async (req, res) => {
     try {
         let userToken = req.headers.token;
         let traineeId = req.params.traineeId;
@@ -783,7 +768,7 @@ app.post('/trainer/trainees/:traineeId/history', async (req, res) => {
         return;
     }
 });
-app.post('/trainer/trainees/:traineeId/food', async (req, res) => {
+app.post('/treina-services/trainer/trainees/:traineeId/food', async (req, res) => {
     try {
         let userToken = req.headers.token;
         let traineeId = req.params.traineeId;
@@ -803,7 +788,7 @@ app.post('/trainer/trainees/:traineeId/food', async (req, res) => {
         return;
     }
 });
-app.post('/trainer/trainees/:traineeId/food/new', async (req, res) => {
+app.post('/treina-services/trainer/trainees/:traineeId/food/new', async (req, res) => {
     try {
         let userToken = req.headers.token;
         let traineeId = req.params.traineeId;
@@ -883,7 +868,7 @@ app.post('/trainer/trainees/:traineeId/food/new', async (req, res) => {
         return ;
     }
 });
-app.post('/trainer/trainees/:traineeId/food/edit', async (req, res) => {
+app.post('/treina-services/trainer/trainees/:traineeId/food/edit', async (req, res) => {
     try {
         let userToken = req.headers.token;
         let traineeId = req.params.traineeId;
@@ -979,7 +964,7 @@ app.post('/trainer/trainees/:traineeId/food/edit', async (req, res) => {
         return ;
     }
 });
-app.post('/trainer/trainees/:traineeId/food/delete', async (req, res) => {
+app.post('/treina-services/trainer/trainees/:traineeId/food/delete', async (req, res) => {
     try {
         let userToken = req.headers.token;
         let traineeId = req.params.traineeId;
@@ -1018,7 +1003,7 @@ app.post('/trainer/trainees/:traineeId/food/delete', async (req, res) => {
         return;
     }
 });
-app.post('/trainer/trainees/:traineeId/exercices', async (req, res) => {
+app.post('/treina-services/trainer/trainees/:traineeId/exercices', async (req, res) => {
     try {
         let userToken = req.headers.token;
         let traineeId = req.params.traineeId;
@@ -1038,7 +1023,7 @@ app.post('/trainer/trainees/:traineeId/exercices', async (req, res) => {
         return;
     }
 });
-app.post('/trainer/trainees/:traineeId/exercices/new', async (req, res) => {
+app.post('/treina-services/trainer/trainees/:traineeId/exercices/new', async (req, res) => {
     try {
         let userToken = req.headers.token;
         let traineeId = req.params.traineeId;
@@ -1102,7 +1087,7 @@ app.post('/trainer/trainees/:traineeId/exercices/new', async (req, res) => {
         return ;
     }
 });
-app.post('/trainer/trainees/:traineeId/exercices/edit', async (req, res) => {
+app.post('/treina-services/trainer/trainees/:traineeId/exercices/edit', async (req, res) => {
     try {
         let userToken = req.headers.token;
         let traineeId = req.params.traineeId;
@@ -1168,7 +1153,7 @@ app.post('/trainer/trainees/:traineeId/exercices/edit', async (req, res) => {
         return ;
     }
 });
-app.post('/trainer/trainees/:traineeId/exercices/delete', async (req, res) => {
+app.post('/treina-services/trainer/trainees/:traineeId/exercices/delete', async (req, res) => {
     try {
         let userToken = req.headers.token;
         let traineeId = req.params.traineeId;
@@ -1207,7 +1192,7 @@ app.post('/trainer/trainees/:traineeId/exercices/delete', async (req, res) => {
         return;
     }
 });
-app.post('/trainer/data/food', async (req, res) => {
+app.post('/treina-services/trainer/data/food', async (req, res) => {
     try {
         let userToken = req.headers.token;
         const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
@@ -1226,7 +1211,7 @@ app.post('/trainer/data/food', async (req, res) => {
         return;
     }
 });
-app.post('/trainer/data/exercices', async (req, res) => {
+app.post('/treina-services/trainer/data/exercices', async (req, res) => {
     try {
         let userToken = req.headers.token;
         const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
@@ -1245,7 +1230,7 @@ app.post('/trainer/data/exercices', async (req, res) => {
         return;
     }
 });
-app.post('/trainer/data/food/new', async (req, res) => {
+app.post('/treina-services/trainer/data/food/new', async (req, res) => {
     try {
         let userToken = req.headers.token;
         const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
@@ -1317,7 +1302,7 @@ app.post('/trainer/data/food/new', async (req, res) => {
         return;
     }
 });
-app.post('/trainer/data/food/edit', async (req, res) => {
+app.post('/treina-services/trainer/data/food/edit', async (req, res) => {
     try {
         let userToken = req.headers.token;
         const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
@@ -1411,7 +1396,7 @@ app.post('/trainer/data/food/edit', async (req, res) => {
         return;
     }
 });
-app.post('/trainer/data/exercices/new', async (req, res) => {
+app.post('/treina-services/trainer/data/exercices/new', async (req, res) => {
     try {
         let userToken = req.headers.token;
         const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
@@ -1467,7 +1452,7 @@ app.post('/trainer/data/exercices/new', async (req, res) => {
         return ;
     }
 });
-app.post('/trainer/data/exercices/edit', async (req, res) => {
+app.post('/treina-services/trainer/data/exercices/edit', async (req, res) => {
     try {
         let userToken = req.headers.token;
         const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
@@ -1530,7 +1515,7 @@ app.post('/trainer/data/exercices/edit', async (req, res) => {
         return ;
     }
 });
-app.post('/trainer/profile', async (req, res) => {
+app.post('/treina-services/trainer/profile', async (req, res) => {
     try {
         let userToken = req.headers.token;
         const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
@@ -1565,7 +1550,7 @@ app.post('/trainer/profile', async (req, res) => {
     }
 });
 
-app.post('/trainee/exercices', async (req, res) => {
+app.post('/treina-services/trainee/exercices', async (req, res) => {
     try {
         let userToken = req.headers.token;
         const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
@@ -1584,7 +1569,7 @@ app.post('/trainee/exercices', async (req, res) => {
         return;
     }
 });
-app.post('/trainee/food', async (req, res) => {
+app.post('/treina-services/trainee/food', async (req, res) => {
     try {
         let userToken = req.headers.token;
         const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
@@ -1603,7 +1588,7 @@ app.post('/trainee/food', async (req, res) => {
         return;
     }
 });
-app.post('/trainee/food/shoppinglist', async (req, res) => {
+app.post('/treina-services/trainee/food/shoppinglist', async (req, res) => {
     try {
         let userToken = req.headers.token;
         const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
@@ -1626,7 +1611,7 @@ app.post('/trainee/food/shoppinglist', async (req, res) => {
         return;
     }
 });
-app.post('/trainee/food/shoppinglist/:idShoppingListElement', async (req, res) => {
+app.post('/treina-services/trainee/food/shoppinglist/:idShoppingListElement', async (req, res) => {
     try {
         let userToken = req.headers.token;
         let idShoppingListElement = req.params.idShoppingListElement;
@@ -1659,7 +1644,7 @@ app.post('/trainee/food/shoppinglist/:idShoppingListElement', async (req, res) =
         return;
     }
 });
-app.post('/trainee/history', async (req, res) => {
+app.post('/treina-services/trainee/history', async (req, res) => {
     try {
         let userToken = req.headers.token;
         const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
@@ -1678,7 +1663,7 @@ app.post('/trainee/history', async (req, res) => {
         return;
     }
 });
-app.post('/trainee/history/new', async (req, res) => {
+app.post('/treina-services/trainee/history/new', async (req, res) => {
     try {
         let userToken = req.headers.token;
         const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
@@ -1718,7 +1703,7 @@ app.post('/trainee/history/new', async (req, res) => {
         return;
     }
 });
-app.post('/trainee/profile', async (req, res) => {
+app.post('/treina-services/trainee/profile', async (req, res) => {
     try {
         let userToken = req.headers.token;
         const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
@@ -1743,7 +1728,7 @@ app.post('/trainee/profile', async (req, res) => {
         return;
     }
 });
-app.post('/trainee/profile/edit', async (req, res) => {
+app.post('/treina-services/trainee/profile/edit', async (req, res) => {
     try {
         let userToken = req.headers.token;
         const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
@@ -1783,7 +1768,7 @@ app.post('/trainee/profile/edit', async (req, res) => {
         return ;
     }
 });
-app.post('/trainee/profile/updateCode', async (req, res) => {
+app.post('/treina-services/trainee/profile/updateCode', async (req, res) => {
     try {
         let userToken = req.headers.token;
         const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
@@ -1828,13 +1813,13 @@ app.post('/trainee/profile/updateCode', async (req, res) => {
 
 
 app.listen(port, async () => {
-    console.log(`Global-controller listening on port ${port}!`);
+    //console.log(`Global-controller listening on port ${port}!`);
 
     //sendEmail('pablosanchezbello@gmail.com', 'Prueba', 'Prueba envio email.\nSegunda linea\n<b>Tercera linea</b>');
 
     try {
         await sequelize.authenticate();
-        console.log('Connection has been established successfully.');
+        //console.log('Connection has been established successfully.');
     } catch (error) {
         console.error('Unable to connect to the database:', error);
     }
