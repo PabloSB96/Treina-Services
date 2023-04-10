@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS treina_user (
     device_id VARCHAR(500),
     plan_id BIGINT,
     plan_revenuecat_obj VARCHAR(2000),
-    plan_purchased_date TIMESTAMP DEFAULT NULL,
+    plan_purchased_date TIMESTAMP,
     recover_password_code VARCHAR(50),
     recover_password_code_date TIMESTAMP,
     active BOOLEAN DEFAULT TRUE,
