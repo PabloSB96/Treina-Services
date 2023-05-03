@@ -269,7 +269,7 @@ app.post('/treina-services/register', async (req, res) => {
         const registerBody = req.body;
         const searchUser = await User.findOne({where: { email: registerBody.email }});
         if (searchUser != undefined) {
-            res.status(400).send({'message': 'BAD_REQUEST'});
+            res.status(400).send({'message': 'USER_ALREADY_EXISTS'});
         } else {
             if ((registerBody.password != undefined && registerBody.password.trim() != '' &&
                 registerBody.email != undefined && registerBody.email.trim() != '' && 
