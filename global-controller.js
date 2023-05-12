@@ -62,6 +62,8 @@ const User = sequelize.define('User', {
     plan: {type: Plan, field: 'plan_id'},
     planRevenuecatObj: {type: DataTypes.STRING, field: 'plan_revenuecat_obj'},
     planPurchasedDate: {type: DataTypes.DATE, field: 'plan_purchased_date'},
+    isInTrial: {type: DataTypes.BOOLEAN, field: 'is_in_trial'},
+    trialStartDate: {type: DataTypes.DATE, field: 'trial_start_date', allowNull: true},
     recoverPasswordCode: {type: DataTypes.STRING, field: 'recover_password_code'},
     recoverPasswordCodeDate: {type: DataTypes.DATE, field: 'recover_password_code_date'},
     active: {type: DataTypes.BOOLEAN},
@@ -376,6 +378,9 @@ app.post('/treina-services/register', async (req, res) => {
             }
         }
     } catch (error) {
+        console.log("\n\n/register -1");
+        console.log(JSON.stringify(error));
+        console.log("/register - 2\n\n");
         res.status(400).send({'message': 'INTERNAL_ERROR'});
         return;
     }
@@ -494,6 +499,33 @@ app.post('/treina-services/plan/activate', async (req, res) => {
     }
 });
 
+app.post('/treina-services/plan/trial', async (req, res) => {
+    // This service is used when the users selects the trial package.
+    try {
+        const registerBody = req.body;
+        const searchUser = await User.findOne({where: { email: registerBody.email }});
+        if (searchUser == undefined || !searchUser.isTrainer) {
+            res.status(400).send({'message': 'BAD_REQUEST'});
+        } else {
+            searchUser.active = true;
+            searchUser.isInTrial = true;
+            searchUser.trialStartDate = (new Date()).getTime();
+            await searchUser.save();
+
+            let result = new Object();
+            result.email = registerBody.email;
+            result.token = await updateTokenLogin(registerBody.email);
+            result.name = searchUser.name;
+
+            res.status(200).json(result);
+            return;
+        }
+    } catch(error){
+        res.status(400).send({'message': 'INTERNAL_ERROR'});
+        return ;
+    }
+});
+
 app.post('/treina-services/registerPurchaseError', async (req, res) => {
     try {
         const registerBody = req.body;
@@ -537,6 +569,8 @@ app.post('/treina-services/login', async (req, res) => {
                     result.email = email;
                     result.token = await updateTokenLogin(email);
                     result.name = searchUser.name;
+                    result.isInTrial = searchUser.isInTrial;
+                    result.trialStartDate = searchUser.trialStartDate;
 
                     /*if (searchUser.isTrainer) {
                         if (searchUser.customerInfo != undefined && searchUser.customerInfo.)
@@ -1538,6 +1572,8 @@ app.post('/treina-services/trainer/profile', async (req, res) => {
                 email: searchUser.email,
                 name: searchUser.name,
                 trainerCode: searchUser.trainerCode,
+                isInTrial: searchUser.isInTrial,
+                trialStartDate: searchUser.trialStartDate,
                 traineeNumber: trainees.length,
                 plan: plan
             };
@@ -1813,13 +1849,13 @@ app.post('/treina-services/trainee/profile/updateCode', async (req, res) => {
 
 
 app.listen(port, async () => {
-    //console.log(`Global-controller listening on port ${port}!`);
+    console.log(`Global-controller listening on port ${port}!`);
 
     //sendEmail('pablosanchezbello@gmail.com', 'Prueba', 'Prueba envio email.\nSegunda linea\n<b>Tercera linea</b>');
 
     try {
         await sequelize.authenticate();
-        //console.log('Connection has been established successfully.');
+        console.log('Connection has been established successfully.');
     } catch (error) {
         console.error('Unable to connect to the database:', error);
     }

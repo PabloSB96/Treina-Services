@@ -58,6 +58,8 @@ CREATE TABLE IF NOT EXISTS treina_user (
     plan_id BIGINT,
     plan_revenuecat_obj VARCHAR(2000),
     plan_purchased_date TIMESTAMP,
+    is_in_trial BOOLEAN DEFAULT (FALSE),
+    trial_start_date TIMESTAMP,
     recover_password_code VARCHAR(50),
     recover_password_code_date TIMESTAMP,
     active BOOLEAN DEFAULT TRUE,
