@@ -267,12 +267,15 @@ app.post('/treina-services/config', async (req, res) => {
 
 app.post('/treina-services/register', async (req, res) => {
     try {
+        console.log("/register - 1");
         // Register the new user here
         const registerBody = req.body;
         const searchUser = await User.findOne({where: { email: registerBody.email }});
         if (searchUser != undefined) {
+            console.log("/register - 2");
             res.status(400).send({'message': 'USER_ALREADY_EXISTS'});
         } else {
+            console.log("/register - 3");
             if ((registerBody.password != undefined && registerBody.password.trim() != '' &&
                 registerBody.email != undefined && registerBody.email.trim() != '' && 
                 registerBody.repeatPassword != undefined && registerBody.repeatPassword.trim() != '' &&
@@ -290,17 +293,55 @@ app.post('/treina-services/register', async (req, res) => {
                         registerBody.birthDate != undefined
                     ) || registerBody.isTrainer
                 )) {
-
+                    console.log("/register - 4");
                     let trainer = undefined;
                     if (!registerBody.isTrainer && registerBody.trainerCode != undefined) {
+                        console.log("/register - 5");
                         // It is a trainee, first check if trainer exists, then match it with his trainer
                         trainer = await User.findOne({where: { trainerCode: registerBody.trainerCode }});
                         if (trainer == null || trainer == undefined) {
+                            console.log("/register - 6");
                             res.status(400).send({'message': 'TRAINER_CODE_NOT_EXISTS'});
                             return ;
                         }
+                        // check number of clients the trainer already has
+                        let trainees = await Team.findAll({where: {trainer: trainer.id}});
+                        if (trainees == undefined) {
+                            trainees = [];
+                        }
+                        console.log("/register - 7");
+                        console.log(trainees);
+                        console.log("/register - 8");
+                        if (trainer.isInTrial == true && (trainees.length + 1) > 1) {
+                            console.log("/register - 9");
+                            res.status(400).send({'message': 'TRAINER_MAX_CLIENTS_EXCEEDED'});
+                            return ;
+                        }
+                        let plan = await Plan.findOne({where: {id: trainer.plan}});
+                        if (plan != undefined && plan.code == 'treina_10_1m_0w0') {
+                            if ((trainees.length + 1) > 5) {
+                                res.status(400).send({'message': 'TRAINER_MAX_CLIENTS_EXCEEDED'});
+                                return ;
+                            }
+                        } else if (plan != undefined && plan.code == 'treina_15_1m_0w0') {
+                            if ((trainees.length + 1) > 10) {
+                                res.status(400).send({'message': 'TRAINER_MAX_CLIENTS_EXCEEDED'});
+                                return ;
+                            }
+                        } else if (plan != undefined && plan.code == 'treina_100_1y_0w0') {
+                            if ((trainees.length + 1) > 5) {
+                                res.status(400).send({'message': 'TRAINER_MAX_CLIENTS_EXCEEDED'});
+                                return ;
+                            }
+                        } else if (plan != undefined && plan.code == 'treina_150_1y_0w0') {
+                            if ((trainees.length + 1) > 10) {
+                                res.status(400).send({'message': 'TRAINER_MAX_CLIENTS_EXCEEDED'});
+                                return ;
+                            }
+                        }
                     }
 
+                    console.log("/register - 10");
                     encryptedPassword = await bcrypt.hash(registerBody.password.trim(), 10);
 
                     let email = registerBody.email;
@@ -373,14 +414,17 @@ app.post('/treina-services/register', async (req, res) => {
                     res.status(200).json(user);
                     return;
             } else {
+                console.log("/register - 11");
                 res.status(400).send({'message': 'BAD_REQUEST'});
                 return;
             }
         }
     } catch (error) {
-        console.log("\n\n/register -1");
+        console.log("\n\n/register - error - 1");
         console.log(JSON.stringify(error));
-        console.log("/register - 2\n\n");
+        console.log("/register - error - 2");
+        console.log(error);
+        console.log("/register - error - 3\n\n");
         res.status(400).send({'message': 'INTERNAL_ERROR'});
         return;
     }
@@ -498,7 +542,53 @@ app.post('/treina-services/plan/activate', async (req, res) => {
         return ;
     }
 });
-
+app.post('/treina-services/plan/check', async (req, res) => {
+    // This service is used when the users selects the trial package.
+    console.log("/plan/check - 1");
+    try {
+        let userToken = req.headers.token;
+        const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+        const email = tokenDecoded.email;
+        const searchUser = await User.findOne({where: {email: email }});
+        console.log("/plan/check - 2");
+        if (searchUser == undefined || !searchUser.isTrainer) {
+            console.log("/plan/check - 3");
+            res.status(400).send({'message': 'BAD_REQUEST'});
+        } else {
+            console.log("/plan/check - 4");
+            if (searchUser.isInTrial) {
+                console.log("/plan/check - 5");
+                console.log("/plan/check - 5.1");
+                let date2DaysInPastFromToday = new Date((new Date()).getTime() - 1000*60*60*24*2);
+                console.log((new Date(searchUser.trialStartDate)).getTime());
+                console.log("/plan/check - 5.2");
+                console.log(date2DaysInPastFromToday.getTime());
+                console.log("/plan/check - 5.3");
+                console.log((new Date(searchUser.trialStartDate)).getTime() >= date2DaysInPastFromToday.getTime());
+                console.log("/plan/check - 5.4");
+                if ((new Date(searchUser.trialStartDate)).getTime() < date2DaysInPastFromToday.getTime()) {
+                    console.log("/plan/check - 6");
+                    res.status(400).send({'message': 'TRIAL_EXPIRED'});
+                    return ;
+                } else {
+                    res.status(200).send({'message': 'TRIAL_ACTIVE'});
+                    return ;
+                }
+            }
+            console.log("/plan/check - 7");
+            res.status(200).send({'message': 'NOT_IN_TRIAL'});
+            return;
+        }
+    } catch(error){
+        console.log("/plan/check - error - 1");
+        console.log(error);
+        console.log("/plan/check - error - 2");
+        console.log(JSON.stringify(error));
+        console.log("/plan/check - error - 3");
+        res.status(400).send({'message': 'INTERNAL_ERROR'});
+        return ;
+    }
+});
 app.post('/treina-services/plan/trial', async (req, res) => {
     // This service is used when the users selects the trial package.
     try {
