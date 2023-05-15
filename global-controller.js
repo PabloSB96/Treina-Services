@@ -29,6 +29,9 @@ const sequelize = new Sequelize('treinaapi', 'root', 'password12345678', {
     logging: false
 });
 
+const TRIAL_NUMBER_DAYS = 7;
+const ENTITLEMENT_ID = 'pro';
+
 // Define models
 const Config = sequelize.define('Config', {
     id: {type: DataTypes.BIGINT, primaryKey: true},
@@ -431,13 +434,25 @@ app.post('/treina-services/register', async (req, res) => {
 });
 
 app.post('/treina-services/plan/register', async (req, res) => {
+    console.log("\n\n/plan/register - 1");
     try {
         const registerBody = req.body;
         const searchUser = await User.findOne({where: { email: registerBody.email }});
         if (searchUser == undefined || !searchUser.isTrainer) {
+            console.log("/plan/register - 2");
+            console.log(JSON.stringify(searchUser));
+            console.log("/plan/register - 2.2");
+            console.log(JSON.stringify(registerBody));
+            console.log("/plan/register - 2.3");
+            if (registerBody != undefined) {
+                console.log(registerBody.email);
+            }
+            console.log("/plan/register - 2.3");
             res.status(400).send({'message': 'BAD_REQUEST'});
         } else {
+            console.log("/plan/register - 3");
             if (registerBody.revenuecat != undefined) {
+                console.log("/plan/register - 4");
                 /*
                 Object {
                     "identifier": "Monthly_Basico",
@@ -458,34 +473,47 @@ app.post('/treina-services/plan/register', async (req, res) => {
                     },
                 }
                 */
-                if (registerBody.revenuecat.product != undefined && registerBody.revenuecat.product.identifier != undefined) {
-                    const plan = await Plan.findOne({where: {code: registerBody.revenuecat.product.identifier }, raw: true});
+                if (registerBody.revenuecat.entitlements.active[ENTITLEMENT_ID] != undefined && registerBody.revenuecat.entitlements.active[ENTITLEMENT_ID].productIdentifier != undefined) {
+                    console.log("/plan/register - 5");
+                    const plan = await Plan.findOne({where: {code: registerBody.revenuecat.entitlements.active[ENTITLEMENT_ID].productIdentifier }, raw: true});
                     if (plan == undefined || plan == null) {
+                        console.log("/plan/register - 6");
                         res.status(400).send({'message': 'PRODUCT_INCORRECT'});
                         return;
                     }
 
-                    searchUser.planRevenuecatObj = JSON.stringify(registerBody.revenuecat);
+                    let planRevenuecatObj = JSON.stringify(registerBody.revenuecat);
+                    if (planRevenuecatObj.length > 1995) { //max length of database column
+                        planRevenuecatObj = JSON.stringify(registerBody.revenuecat.entitlements.active[ENTITLEMENT_ID]);
+                    }
+                    searchUser.planRevenuecatObj = planRevenuecatObj;
                     searchUser.planPurchasedDate = (new Date()).getTime();
                     searchUser.active = true;
                     searchUser.plan = plan.id;
                     await searchUser.save();
 
-                    sendEmail(searchUser.email, 'Activación de cuenta', 'Su cuenta: ' + searchUser.email + ' como entrenador ha sido activada correctamente con el siguiente plan:\nNombre del plan: ' + registerBody.revenuecat.product.title + '\nPrecio: ' + registerBody.revenuecat.product.priceString);
+                    console.log("/plan/register - 7");
+
+                    //sendEmail(searchUser.email, 'Activación de cuenta', 'Su cuenta: ' + searchUser.email + ' como entrenador ha sido activada correctamente con el siguiente plan:\nNombre del plan: ' + registerBody.revenuecat.product.title + '\nPrecio: ' + registerBody.revenuecat.product.priceString);
 
                     res.status(200).json(searchUser);
                     return;
                 } else {
+                    console.log("/plan/register - 8");
                     res.status(400).send({'message': 'PRODUCT_INCORRECT'});
                     return;
                 }
                 
             } else {
+                console.log("/plan/register - 9");
                 res.status(400).send({'message': 'BAD_REQUEST'});
                 return;
             }
         }
     } catch(error){
+        console.log("/plan/register - 10");
+        console.log(JSON.stringify(error));
+        console.log("/plan/register - 11");
         res.status(400).send({'message': 'INTERNAL_ERROR'});
         return ;
     }
@@ -516,18 +544,31 @@ app.post('/treina-services/plan/remove', async (req, res) => {
 app.post('/treina-services/plan/activate', async (req, res) => {
     // This service is used when in the login the user has a plan activated,
     // but for some reason it was not previously registered on the backend correctly.
+    console.log("\n\n/plan/activate - 1");
     try {
         const registerBody = req.body;
-        const searchUser = await User.findOne({where: { email: registerBody.email }});
+        let email = registerBody.email;
+        console.log("/plan/activate - 2");
+        console.log(registerBody.email);
+        console.log("/plan/activate - 3");
+        if (email == undefined || email.trim() == '') {
+            let userToken = req.headers.token;
+            const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
+            email = tokenDecoded.email;
+        }
+        const searchUser = await User.findOne({where: { email: email }});
+        console.log("/plan/activate - 4");
         if (searchUser == undefined || !searchUser.isTrainer) {
+            console.log("/plan/activate - 5");
             res.status(400).send({'message': 'BAD_REQUEST'});
         } else {
+            console.log("/plan/activate - 6");
             searchUser.active = true;
             await searchUser.save();
 
             let result = new Object();
-            result.email = registerBody.email;
-            result.token = await updateTokenLogin(registerBody.email);
+            result.email = email;
+            result.token = await updateTokenLogin(email);
             result.name = searchUser.name;
 
             /*if (searchUser.isTrainer) {
@@ -538,6 +579,9 @@ app.post('/treina-services/plan/activate', async (req, res) => {
             return;
         }
     } catch(error){
+        console.log("/plan/activate - 7");
+        console.log(JSON.stringify(error));
+        console.log("/plan/activate - 8");
         res.status(400).send({'message': 'INTERNAL_ERROR'});
         return ;
     }
@@ -559,14 +603,14 @@ app.post('/treina-services/plan/check', async (req, res) => {
             if (searchUser.isInTrial) {
                 console.log("/plan/check - 5");
                 console.log("/plan/check - 5.1");
-                let date2DaysInPastFromToday = new Date((new Date()).getTime() - 1000*60*60*24*2);
+                let dateDaysInPastFromToday = new Date((new Date()).getTime() - 1000 * 60 * 60 * 24 * TRIAL_NUMBER_DAYS);
                 console.log((new Date(searchUser.trialStartDate)).getTime());
                 console.log("/plan/check - 5.2");
-                console.log(date2DaysInPastFromToday.getTime());
+                console.log(dateDaysInPastFromToday.getTime());
                 console.log("/plan/check - 5.3");
-                console.log((new Date(searchUser.trialStartDate)).getTime() >= date2DaysInPastFromToday.getTime());
+                console.log((new Date(searchUser.trialStartDate)).getTime() >= dateDaysInPastFromToday.getTime());
                 console.log("/plan/check - 5.4");
-                if ((new Date(searchUser.trialStartDate)).getTime() < date2DaysInPastFromToday.getTime()) {
+                if ((new Date(searchUser.trialStartDate)).getTime() < dateDaysInPastFromToday.getTime()) {
                     console.log("/plan/check - 6");
                     res.status(400).send({'message': 'TRIAL_EXPIRED'});
                     return ;
@@ -615,7 +659,6 @@ app.post('/treina-services/plan/trial', async (req, res) => {
         return ;
     }
 });
-
 app.post('/treina-services/registerPurchaseError', async (req, res) => {
     try {
         const registerBody = req.body;
