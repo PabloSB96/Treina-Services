@@ -66,6 +66,7 @@ const User = sequelize.define('User', {
     planRevenuecatObj: {type: DataTypes.STRING, field: 'plan_revenuecat_obj'},
     planPurchasedDate: {type: DataTypes.DATE, field: 'plan_purchased_date'},
     isInTrial: {type: DataTypes.BOOLEAN, field: 'is_in_trial'},
+    isTrialEnded: {type: DataTypes.BOOLEAN, field: 'is_trial_ended'},
     trialStartDate: {type: DataTypes.DATE, field: 'trial_start_date', allowNull: true},
     recoverPasswordCode: {type: DataTypes.STRING, field: 'recover_password_code'},
     recoverPasswordCodeDate: {type: DataTypes.DATE, field: 'recover_password_code_date'},
@@ -489,6 +490,7 @@ app.post('/treina-services/plan/register', async (req, res) => {
                     searchUser.planRevenuecatObj = planRevenuecatObj;
                     searchUser.planPurchasedDate = (new Date()).getTime();
                     searchUser.active = true;
+                    searchUser.isTrialEnded = true;
                     searchUser.plan = plan.id;
                     await searchUser.save();
 
@@ -703,6 +705,7 @@ app.post('/treina-services/login', async (req, res) => {
                     result.token = await updateTokenLogin(email);
                     result.name = searchUser.name;
                     result.isInTrial = searchUser.isInTrial;
+                    result.isTrialEnded = searchUser.isTrialEnded;
                     result.trialStartDate = searchUser.trialStartDate;
 
                     /*if (searchUser.isTrainer) {
@@ -1685,9 +1688,10 @@ app.post('/treina-services/trainer/data/exercices/edit', async (req, res) => {
 app.post('/treina-services/trainer/profile', async (req, res) => {
     try {
         let userToken = req.headers.token;
+        let registerBody = req.body;
         const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
         const email = tokenDecoded.email;
-        const searchUser = await User.findOne({where: {email: email }});
+        let searchUser = await User.findOne({where: {email: email }});
         if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
             res.status(400).send('TOKEN_NOT_VALID');
             return;
@@ -1700,12 +1704,31 @@ app.post('/treina-services/trainer/profile', async (req, res) => {
             if (searchUser.plan != null && searchUser.plan != undefined) {
                 plan = await Plan.findOne({where: {id: searchUser.plan}});
             }
+            // check if a plan to be updated is needed
+            if (registerBody.revenuecat != undefined && registerBody.revenuecat.productIdentifier != undefined) {
+                let revenuecatPlan = await Plan.findOne({where: {code: registerBody.revenuecat.productIdentifier}, raw: true});
+                if (revenuecatPlan == undefined || revenuecatPlan == null) {
+                    console.log("/trainer/profile - error - plan null");
+                    res.status(400).send({'message': 'PRODUCT_INCORRECT'});
+                    return ;
+                }
+                if (plan.id == undefined || plan.id != revenuecatPlan.id) {
+                    // User has updated his plan
+                    searchUser.planRevenuecatObj = JSON.stringify(registerBody.revenuecat);
+                    searchUser.planPurchasedDate = (new Date()).getTime();
+                    searchUser.active = true;
+                    searchUser.isTrialEnded = true;
+                    searchUser.plan = revenuecatPlan.id;
+                    await searchUser.save();
+                }
+            }
             let myProfile = {
                 id: searchUser.id,
                 email: searchUser.email,
                 name: searchUser.name,
                 trainerCode: searchUser.trainerCode,
                 isInTrial: searchUser.isInTrial,
+                isTrialEnded: searchUser.isTrialEnded,
                 trialStartDate: searchUser.trialStartDate,
                 traineeNumber: trainees.length,
                 plan: plan

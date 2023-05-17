@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS treina_user (
     plan_revenuecat_obj VARCHAR(2000),
     plan_purchased_date TIMESTAMP,
     is_in_trial BOOLEAN DEFAULT FALSE,
+    is_trial_ended BOOLEAN DEFAULT FALSE,
     trial_start_date TIMESTAMP,
     recover_password_code VARCHAR(50),
     recover_password_code_date TIMESTAMP,
@@ -234,5 +235,5 @@ INSERT INTO treina_plan(id, code, title, description, cost_month, cost_year) VAL
 INSERT INTO treina_plan(id, code, title, description, cost_month, cost_year) VALUES (3, 'treina_30_1m_0w0', 'Empresarial (mensual)', 'Plan completo mensual inicial.', 30.00, 0.00);
 INSERT INTO treina_plan(id, code, title, description, cost_month, cost_year) VALUES (4, 'treina_100_1y_0w0', 'Básico (anual)', 'Plan básico anual inicial.', 100.00, 0.00);
 INSERT INTO treina_plan(id, code, title, description, cost_month, cost_year) VALUES (5, 'treina_150_1y_0w0', 'Premium (anual)', 'Plan medio anual inicial.', 150.00, 0.00);
-INSERT INTO treina_plan(id, code, title, description, cost_month, cost_year) VALUES (6, 'treina_301_1y_0w0', 'Empresarial (anual)', 'Plan completo anual inicial.', 300.00, 0.00);
+INSERT INTO treina_plan(id, code, title, description, cost_month, cost_year) VALUES (6, 'treina_300_1y_0w0', 'Empresarial (anual)', 'Plan completo anual inicial.', 300.00, 0.00);
 COMMIT;
