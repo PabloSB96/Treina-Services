@@ -1686,33 +1686,47 @@ app.post('/treina-services/trainer/data/exercices/edit', async (req, res) => {
     }
 });
 app.post('/treina-services/trainer/profile', async (req, res) => {
+    console.log("/trainer/profile - 1");
     try {
         let userToken = req.headers.token;
         let registerBody = req.body;
         const tokenDecoded = jwt.verify(await updateToken(userToken), process.env.TOKEN_KEY);
         const email = tokenDecoded.email;
         let searchUser = await User.findOne({where: {email: email }});
+        console.log("/trainer/profile - 2");
         if (searchUser == undefined && searchUser.isTrainer == tokenDecoded.isTrainer && searchUser.isTrainer == true) {
+            console.log("/trainer/profile - 3");
             res.status(400).send('TOKEN_NOT_VALID');
             return;
         } else {
+            console.log("/trainer/profile - 4");
             let trainees = await Team.findAll({where: {trainer: searchUser.id}});
+            console.log("/trainer/profile - 5");
             if (trainees == null || trainees == undefined) {
+                console.log("/trainer/profile - 6");
                 trainees = [];
             }
             let plan = undefined;
+            console.log("/trainer/profile - 7");
             if (searchUser.plan != null && searchUser.plan != undefined) {
+                console.log("/trainer/profile - 8");
                 plan = await Plan.findOne({where: {id: searchUser.plan}});
             }
             // check if a plan to be updated is needed
+            console.log("/trainer/profile - 9");
             if (registerBody.revenuecat != undefined && registerBody.revenuecat.productIdentifier != undefined) {
+                console.log("/trainer/profile - 10");
                 let revenuecatPlan = await Plan.findOne({where: {code: registerBody.revenuecat.productIdentifier}, raw: true});
+                console.log("/trainer/profile - 11");
                 if (revenuecatPlan == undefined || revenuecatPlan == null) {
+                    console.log("/trainer/profile - 12");
                     console.log("/trainer/profile - error - plan null");
                     res.status(400).send({'message': 'PRODUCT_INCORRECT'});
                     return ;
                 }
-                if (plan.id == undefined || plan.id != revenuecatPlan.id) {
+                console.log("/trainer/profile - 13");
+                if (plan == undefined || plan.id != revenuecatPlan.id) {
+                    console.log("/trainer/profile - 14");
                     // User has updated his plan
                     searchUser.planRevenuecatObj = JSON.stringify(registerBody.revenuecat);
                     searchUser.planPurchasedDate = (new Date()).getTime();
@@ -1721,7 +1735,9 @@ app.post('/treina-services/trainer/profile', async (req, res) => {
                     searchUser.plan = revenuecatPlan.id;
                     await searchUser.save();
                 }
+                console.log("/trainer/profile - 15");
             }
+            console.log("/trainer/profile - 16");
             let myProfile = {
                 id: searchUser.id,
                 email: searchUser.email,
@@ -1737,6 +1753,9 @@ app.post('/treina-services/trainer/profile', async (req, res) => {
             return;
         }
     } catch (error) {
+        console.log("/trainer/profile - 17");
+        console.log(JSON.stringify(error));
+        console.log("/trainer/profile - 18");
         res.status(400).send('INTERNAL_ERROR');
         return ;
     }
