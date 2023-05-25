@@ -23,7 +23,7 @@ app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
 
 // Sequelize: connect to database
-const sequelize = new Sequelize('treinaapi', 'root', 'password12345678', {
+const sequelize = new Sequelize('treinaapi', 'root', 'ad156ed4f21e491f1b8abf20775258365b3a905b525b5b2c', {
     host: 'localhost',
     dialect: 'mysql',
     logging: false
