@@ -23,7 +23,7 @@ app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
 
 // Sequelize: connect to database
-const sequelize = new Sequelize('treinaapi', 'root', 'ad156ed4f21e491f1b8abf20775258365b3a905b525b5b2c', {
+const sequelize = new Sequelize('treinaapi', 'root', 'password12345678', {
     host: 'localhost',
     dialect: 'mysql',
     logging: false
@@ -247,22 +247,32 @@ let sendEmail = async (to, subject, text) => {
 }
 
 app.post('/treina-services/config', async (req, res) => {
+    console.log("global-controller - /config - 1");
     try {
         const reqBody = req.body;
+        console.log("global-controller - /config - 2");
         if (reqBody.appVersion != undefined && reqBody.appVersion.trim() != '') {
+            console.log("global-controller - /config - 3");
             let currentVersion = await Config.findOne({where: {name: 'app.currentVersion'}, raw: true});
+            console.log("global-controller - /config - 4");
             if (currentVersion != undefined && currentVersion.value == reqBody.appVersion) {
+                console.log("global-controller - /config - 5");
                 res.status(200).send("OK");
                 return ;
             } else {
+                console.log("global-controller - /config - 6");
                 res.status(400).send("INTERNAL_ERROR");
                 return ;
             }
         } else {
+            console.log("global-controller - /config - 7");
             res.status(400).send("BAD_REQUEST");
             return ;
         }
     } catch (error) {
+        console.log("global-controller - /config - 8");
+        console.log(JSON.stringify(error));
+        console.log("global-controller - /config - 9");
         res.status(400).send("INTERNAL_ERROR");
         return ;
     }
