@@ -257,7 +257,8 @@ app.post('/treina-services/config', async (req, res) => {
             console.log("global-controller - /config - 4");
             if (currentVersion != undefined && currentVersion.value == reqBody.appVersion) {
                 console.log("global-controller - /config - 5");
-                res.status(200).send("OK");
+                let configuration = await Config.findAll({raw: true});
+                res.status(200).json(configuration);
                 return ;
             } else {
                 console.log("global-controller - /config - 6");
@@ -401,7 +402,9 @@ app.post('/treina-services/register', async (req, res) => {
                         });
                     }
 
-                    if (!user.active) {
+                    let configPurchasesEnabled = await Config.findOne({where: {name: 'purchases.enabled'}, raw: true});
+
+                    if (!user.active && configPurchasesEnabled.value != 'false') {
                         res.status(400).send({'message': 'USER_NOT_ACTIVE'});
                         return;
                     }
