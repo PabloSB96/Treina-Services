@@ -5,6 +5,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const uuid = require('uuid');
 
 var nodemailer = require('nodemailer');
 
@@ -409,6 +410,84 @@ app.post('/treina-services/register', async (req, res) => {
                         return;
                     }
 
+                    console.log("global-controller - /register - 1");
+
+                    if (registerBody.isTrainer && configPurchasesEnabled.value == 'false') {
+                        console.log("global-controller - /register - 2");
+                        // create test user for the trainer
+                        let generatedUserEncryptedPassword = await bcrypt.hash('a12345678', 10);
+                        console.log("global-controller - /register - 2.2");
+                        let clientEmail = 'test-user-' + uuid.v1() + '@gmail.com';
+                        console.log("global-controller - /register - 2.3");
+                        let client = undefined;
+                        try {
+                            client = await User.create({
+                                email: clientEmail,
+                                password: generatedUserEncryptedPassword,
+                                sex: 'H',
+                                birthDate: 946684800000,
+                                isTrainer: false,
+                                trainerCode: trainerCode,
+                                name: 'Test user',
+                                token: 'null',
+                                deviceId: 'null',
+                                goal: 'Bajar de peso',
+                                goalFull: 'Mi objetivo principal es bajar de peso. Actualmente estoy sobre unos 90kg pero me gustaría bajar de peso y llegar a los 70kg. También me gustaría al mismo tiempo poder conseguir el six pack para marcar abdominales, de aquí al verano que viene.',
+                                height: 170.0,
+                                weight: 90.0,
+                                active: false
+                            });
+                            console.log("global-controller - /register - 3");
+                            await Team.create({
+                                trainer: user.id,
+                                trainee: client.id
+                            });
+                            console.log("global-controller - /register - 4");
+                            let historicalData1 = await UserMeasuresHistory.create({
+                                weightKg: 90,
+                                chestCm: 103,
+                                armCm: 30,
+                                waistCm: 140,
+                                hipCm: 150,
+                                gluteusCm: 160,
+                                thighCm: 80,
+                                trainee: client.id,
+                                createdAt: ((new Date()).getTime() - 1296000000)
+                            });
+                            console.log("global-controller - /register - 5");
+                            let historicalData2 = await UserMeasuresHistory.create({
+                                weightKg: 88.9,
+                                chestCm: 100,
+                                armCm: 31,
+                                waistCm: 135.5,
+                                hipCm: 143,
+                                gluteusCm: 157,
+                                thighCm: 79,
+                                trainee: client.id,
+                                createdAt: ((new Date()).getTime() - 604800000)
+                            });
+                            console.log("global-controller - /register - 6");
+                            let historicalData3 = await UserMeasuresHistory.create({
+                                weightKg: 86.3,
+                                chestCm: 99,
+                                armCm: 30.5,
+                                waistCm: 130,
+                                hipCm: 140,
+                                gluteusCm: 150,
+                                thighCm: 77,
+                                trainee: client.id,
+                                createdAt: ((new Date()).getTime() - 86400000)
+                            });
+                            console.log("global-controller - /register - 7");
+                        } catch (e) {
+                            console.log("global-controller - /register - error - 1");
+                            console.log(e);
+                            console.log("global-controller - /register - error - 2");
+                            console.log(JSON.stringify(e));
+                            console.log("global-controller - /register - error - 3");
+                        }
+                    }
+
                     /*if (registerBody.isTrainer) {
                         sendEmail(
                             registerBody.email.toLowerCase(), 
@@ -416,6 +495,7 @@ app.post('/treina-services/register', async (req, res) => {
                             'Se ha completado tu registro como entrenador correctamente. Para poder iniciar sesión debemos activar tu cuenta, y para ello debes solicitarnos un plan en nuestra web: www.treina.app con este mismo email. En caso de cualquier duda o problema no dudes en contactarnos en treina.ayuda@gmail.com.');
                     }*/
 
+                    console.log("global-controller - /register - 8");
                     res.status(200).json(user);
                     return;
             } else {
@@ -854,11 +934,18 @@ app.post('/treina-services/trainer/trainees/:traineeId/profile', async (req, res
             res.status(400).send('TOKEN_NOT_VALID');
             return;
         } else {
-            let trainee = await User.findOne({where: {id: traineeId}, attributes: {exclude: ['password', 'recoverPasswordCode', 'recoverPasswordCodeDate', 'active']}});
+            let trainee = await User.findOne({where: {id: traineeId}, attributes: {exclude: ['password', 'recoverPasswordCode', 'recoverPasswordCodeDate', 'active']}, raw: true});
+            console.log("/trainer/trainees/profile - 1");
+            console.log(trainee);
+            console.log("/trainer/trainees/profile - 2");
+            console.log(JSON.stringify(trainee));
+            console.log("/trainer/trainees/profile - 3");
             res.status(200).json(trainee);
             return;
         }
     } catch (error) {
+        console.log(error);
+        console.log(JSON.stringify(error));
         res.status(400).send('INTERNAL_ERROR');
         return;
     }
