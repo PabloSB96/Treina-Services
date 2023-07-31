@@ -24,7 +24,7 @@ app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
 
 // Sequelize: connect to database
-const sequelize = new Sequelize('treinaapi', 'root', 'password12345678', {
+const sequelize = new Sequelize('treinaapi', 'root', 'ad156ed4f21e491f1b8abf20775258365b3a905b525b5b2c', {
     host: 'localhost',
     dialect: 'mysql',
     logging: false
@@ -2001,7 +2001,7 @@ app.post('/treina-services/trainee/profile/updateCode', async (req, res) => {
 });
 
 
-app.listen(port, async () => {
+app.listen(port, 'travelit.io', async () => {
     //console.log(`Global-controller listening on port ${port}!`);
 
     //sendEmail('pablosanchezbello@gmail.com', 'Prueba', 'Prueba envio email.\nSegunda linea\n<b>Tercera linea</b>');
