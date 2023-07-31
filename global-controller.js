@@ -248,33 +248,23 @@ let sendEmail = async (to, subject, text) => {
 }
 
 app.post('/treina-services/config', async (req, res) => {
-    console.log("global-controller - /config - 1");
     try {
         const reqBody = req.body;
-        console.log("global-controller - /config - 2");
         if (reqBody.appVersion != undefined && reqBody.appVersion.trim() != '') {
-            console.log("global-controller - /config - 3");
             let currentVersion = await Config.findOne({where: {name: 'app.currentVersion'}, raw: true});
-            console.log("global-controller - /config - 4");
             if (currentVersion != undefined && currentVersion.value == reqBody.appVersion) {
-                console.log("global-controller - /config - 5");
                 let configuration = await Config.findAll({raw: true});
                 res.status(200).json(configuration);
                 return ;
             } else {
-                console.log("global-controller - /config - 6");
                 res.status(400).send("INTERNAL_ERROR");
                 return ;
             }
         } else {
-            console.log("global-controller - /config - 7");
             res.status(400).send("BAD_REQUEST");
             return ;
         }
     } catch (error) {
-        console.log("global-controller - /config - 8");
-        console.log(JSON.stringify(error));
-        console.log("global-controller - /config - 9");
         res.status(400).send("INTERNAL_ERROR");
         return ;
     }
@@ -410,15 +400,10 @@ app.post('/treina-services/register', async (req, res) => {
                         return;
                     }
 
-                    console.log("global-controller - /register - 1");
-
                     if (registerBody.isTrainer && configPurchasesEnabled.value == 'false') {
-                        console.log("global-controller - /register - 2");
                         // create test user for the trainer
                         let generatedUserEncryptedPassword = await bcrypt.hash('a12345678', 10);
-                        console.log("global-controller - /register - 2.2");
                         let clientEmail = 'test-user-' + uuid.v1() + '@gmail.com';
-                        console.log("global-controller - /register - 2.3");
                         let client = undefined;
                         try {
                             client = await User.create({
@@ -437,12 +422,10 @@ app.post('/treina-services/register', async (req, res) => {
                                 weight: 90.0,
                                 active: false
                             });
-                            console.log("global-controller - /register - 3");
                             await Team.create({
                                 trainer: user.id,
                                 trainee: client.id
                             });
-                            console.log("global-controller - /register - 4");
                             let historicalData1 = await UserMeasuresHistory.create({
                                 weightKg: 90,
                                 chestCm: 103,
@@ -454,7 +437,6 @@ app.post('/treina-services/register', async (req, res) => {
                                 trainee: client.id,
                                 createdAt: ((new Date()).getTime() - 1296000000)
                             });
-                            console.log("global-controller - /register - 5");
                             let historicalData2 = await UserMeasuresHistory.create({
                                 weightKg: 88.9,
                                 chestCm: 100,
@@ -466,7 +448,6 @@ app.post('/treina-services/register', async (req, res) => {
                                 trainee: client.id,
                                 createdAt: ((new Date()).getTime() - 604800000)
                             });
-                            console.log("global-controller - /register - 6");
                             let historicalData3 = await UserMeasuresHistory.create({
                                 weightKg: 86.3,
                                 chestCm: 99,
@@ -478,14 +459,7 @@ app.post('/treina-services/register', async (req, res) => {
                                 trainee: client.id,
                                 createdAt: ((new Date()).getTime() - 86400000)
                             });
-                            console.log("global-controller - /register - 7");
-                        } catch (e) {
-                            console.log("global-controller - /register - error - 1");
-                            console.log(e);
-                            console.log("global-controller - /register - error - 2");
-                            console.log(JSON.stringify(e));
-                            console.log("global-controller - /register - error - 3");
-                        }
+                        } catch (e) { }
                     }
 
                     /*if (registerBody.isTrainer) {
@@ -495,7 +469,6 @@ app.post('/treina-services/register', async (req, res) => {
                             'Se ha completado tu registro como entrenador correctamente. Para poder iniciar sesión debemos activar tu cuenta, y para ello debes solicitarnos un plan en nuestra web: www.treina.app con este mismo email. En caso de cualquier duda o problema no dudes en contactarnos en treina.ayuda@gmail.com.');
                     }*/
 
-                    console.log("global-controller - /register - 8");
                     res.status(200).json(user);
                     return;
             } else {
@@ -935,17 +908,10 @@ app.post('/treina-services/trainer/trainees/:traineeId/profile', async (req, res
             return;
         } else {
             let trainee = await User.findOne({where: {id: traineeId}, attributes: {exclude: ['password', 'recoverPasswordCode', 'recoverPasswordCodeDate', 'active']}, raw: true});
-            console.log("/trainer/trainees/profile - 1");
-            console.log(trainee);
-            console.log("/trainer/trainees/profile - 2");
-            console.log(JSON.stringify(trainee));
-            console.log("/trainer/trainees/profile - 3");
             res.status(200).json(trainee);
             return;
         }
     } catch (error) {
-        console.log(error);
-        console.log(JSON.stringify(error));
         res.status(400).send('INTERNAL_ERROR');
         return;
     }
